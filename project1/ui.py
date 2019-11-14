@@ -9,8 +9,7 @@
 import app
 
 def main():
-    path = "./3.png"
-    a = app.App(path)
+    a = app.App('image/5.jpeg')
     a.display()
 
 if __name__=="__main__":
