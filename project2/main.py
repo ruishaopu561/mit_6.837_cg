@@ -9,7 +9,7 @@
 import app
 
 def main():
-    a = app.App('image/5.jpeg')
+    a = app.App('image/2.jpeg')
     a.display()
 
 if __name__=="__main__":
