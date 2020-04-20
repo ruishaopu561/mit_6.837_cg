@@ -1,2 +1,1 @@
-# opencv
-record code for opencv and caffe and so on.
+最近开始重新学习计算机图形学，记录一下mit的几个lab
