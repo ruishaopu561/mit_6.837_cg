@@ -23,18 +23,27 @@ bool Sphere::intersect(const Ray &r, Hit &h, float tmin)
         return false;
     }
     
-    float t = sqrt(radius * radius -d2);
-
-    bool value = false;
+    float t = sqrt(radius * radius - d2);
     if(tp - t >= tmin)
-    { 
+    {
         if(tp - t < h.getT())
         {
             Vec3f normal = r.pointAtParameter(tp - t) - center;
             normal.Normalize();
             h.set(tp - t, material, normal, r);
         }
-        value = true;
+        return true;
     }
-    return value;
+
+    if(tp + t >= tmin)
+    {
+        if(tp + t < h.getT())
+        {
+            Vec3f normal = r.pointAtParameter(tp + t) - center;
+            normal.Normalize();
+            h.set(tp + t, material, normal, r);
+        }
+        return true;
+    }
+    return false;
 }
