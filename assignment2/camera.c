@@ -51,7 +51,6 @@ PerspectiveCamera::PerspectiveCamera(Vec3f &cer, Vec3f &tdirection, Vec3f &tup, 
     horizontal.Normalize();
     up.Normalize();
 
-    std::cout << "angle: " << angle << std::endl;
 }
 
 PerspectiveCamera::~PerspectiveCamera()
