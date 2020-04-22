@@ -5,7 +5,6 @@ Sphere::Sphere(Vec3f &point, float &r, Material *&m)
     center = point;
     radius = r;
     material = m;
-    // std::cout << center << std::endl;
 }
 
 Sphere::~Sphere()
@@ -31,7 +30,9 @@ bool Sphere::intersect(const Ray &r, Hit &h, float tmin)
     { 
         if(tp - t < h.getT())
         {
-            h.set(tp - t, material, r);
+            Vec3f normal = r.pointAtParameter(tp - t) - center;
+            normal.Normalize();
+            h.set(tp - t, material, normal, r);
         }
         value = true;
     }

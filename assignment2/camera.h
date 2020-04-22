@@ -16,7 +16,6 @@ protected:
     Vec3f direction;
     Vec3f up;
     Vec3f horizontal;
-    float size;
 };
 
 class OrthographicCamera : public Camera
@@ -27,7 +26,18 @@ public:
     virtual Ray generateRay(Vec2f point);
     virtual float getTMin() const;
 private:
+    float size;
 };
 
+class PerspectiveCamera : public Camera
+{
+public:
+    PerspectiveCamera(Vec3f &, Vec3f &, Vec3f &, float);
+    ~PerspectiveCamera();
+    virtual Ray generateRay(Vec2f point);
+    virtual float getTMin() const;
+private:
+    float angle;
+};
 
 #endif // !_CAMERA_H_

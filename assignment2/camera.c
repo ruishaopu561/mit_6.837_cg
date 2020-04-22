@@ -1,5 +1,6 @@
 #include "camera.h"
 #include <float.h>
+#include <math.h>
 
 Camera::Camera()
 {
@@ -38,3 +39,32 @@ float OrthographicCamera::getTMin() const
     // 返回最大的负值
     return -FLT_MAX;
 }
+
+PerspectiveCamera::PerspectiveCamera(Vec3f &cer, Vec3f &tdirection, Vec3f &tup, float tangle)
+{
+    center = cer;
+    angle = angle;
+    direction = tdirection;
+    horizontal.Cross3(horizontal, tup, direction);
+    up.Cross3(tup, horizontal, direction);
+    direction.Normalize();
+    horizontal.Normalize();
+    up.Normalize();
+}
+
+PerspectiveCamera::~PerspectiveCamera()
+{
+}
+
+Ray PerspectiveCamera::generateRay(Vec2f point)
+{
+    Vec3f dir = cos(angle/2) / (2*sin(angle/2)) * direction + (point.x() - 0.5) * up + (point.y() - 0.5) * horizontal;
+    dir.Normalize();
+    return Ray(center, dir);
+}
+
+float PerspectiveCamera::getTMin() const
+{
+    return -FLT_MAX;
+}
+
