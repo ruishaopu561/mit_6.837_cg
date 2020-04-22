@@ -29,7 +29,6 @@ OrthographicCamera::~OrthographicCamera()
 
 Ray OrthographicCamera::generateRay(Vec2f point)
 {
-    // Vec3f origin = center + (point.y() - 0.5) * size * horizontal + (point.x() - 0.5) * size * up;
     Vec3f origin = center + size * horizontal * (point.y() - 0.5) + size * up * (point.x() - 0.5);
     return Ray(origin, direction);
 }
@@ -43,7 +42,7 @@ float OrthographicCamera::getTMin() const
 PerspectiveCamera::PerspectiveCamera(Vec3f &cer, Vec3f &tdirection, Vec3f &tup, float tangle)
 {
     center = cer;
-    angle = angle;
+    angle = tangle;
     direction = tdirection;
     horizontal.Cross3(horizontal, tup, direction);
     up.Cross3(tup, horizontal, direction);

@@ -44,12 +44,13 @@ void saveImage(const char *output_file, SceneParser *sp, int width, int height)
                 assert(h.getMaterial() != NULL);
 
                 Vec3f color(ambient * (h.getMaterial())->getDiffuseColor());
+                std::cout << color << std::endl;
                 for(int k=0; k<sp->getNumLights(); k++)
                 {
                     Vec3f dir(0, 0, 0), col(0, 0, 0);
                     Light *light = sp->getLight(k);
                     light->getIllumination (r.pointAtParameter(h.getT()), dir, col);
-                    color = max(0.0f, dir.Dot3(h.getNormal())) * col * (h.getMaterial())->getDiffuseColor();
+                    color += max(0.0f, dir.Dot3(h.getNormal())) * col * (h.getMaterial())->getDiffuseColor();
                 }
                 image->SetPixel(height - j - 1, width - i - 1, color);
             }
@@ -67,7 +68,7 @@ void normalVisualization(const char* normal_file, SceneParser *sp, int width, in
     }
     
     Image *normalImg = new Image(width, height);
-    normalImg->SetAllPixels(sp->getBackgroundColor());
+    normalImg->SetAllPixels(Vec3f(0, 0, 0));
 
     Camera *camera = sp->getCamera();
     Group *group = sp->getGroup();
@@ -82,7 +83,14 @@ void normalVisualization(const char* normal_file, SceneParser *sp, int width, in
             if(group->intersect(r, h, camera->getTMin()))
             {
                 assert(h.getMaterial() != NULL);
-                normalImg->SetPixel(height - j - 1, width - i - 1, h.getNormal());
+
+                // 显示时取法向量各部分的绝对值
+                float d0, d1, d2;
+                h.getNormal().Get(d0, d1, d2);
+                d0 = d0 >= 0 ? d0: -d0;
+                d1 = d1 >= 0 ? d1: -d1;
+                d2 = d2 >= 0 ? d2: -d2;
+                normalImg->SetPixel(height - j - 1, width - i - 1, Vec3f(d0, d1, d2));
             }
         }
     }
