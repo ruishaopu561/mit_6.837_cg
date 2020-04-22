@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <cstring>
+#include <float.h>
 #include "camera.h"
 #include "scene_parser.h"
 #include "hit.h"
@@ -12,6 +13,7 @@
 Vec3f setcolor(int depth_min, int depth_max, float depth)
 {
 	float t = ((float)depth_max - depth) / (depth_max - depth_min);
+	// float t = (depth - (float)depth_min) / (depth_max - depth_min);
 	return Vec3f(t, t, t);
 }
 
@@ -70,14 +72,14 @@ int main(int argc, char* argv[])
     {
         for(int j=0; j<height; j++)
         {
-            Hit h = Hit();
+            Hit h = Hit(FLT_MAX, NULL);
             Vec2f point((float)i/width, (float)j/height);
             Ray r = camera->generateRay(point);
             if(group->intersect(r, h, camera->getTMin()))
             {
                 assert(h.getMaterial() != NULL);
-                image->SetPixel(height-j-1, width-i-1, (h.getMaterial())->getDiffuseColor());
-                backImg->SetPixel(height-j-1, width-i-1, setcolor(depth_min, depth_max, h.getT()));
+                image->SetPixel(height - j - 1, width - i - 1, (h.getMaterial())->getDiffuseColor());
+                backImg->SetPixel(height - j - 1, width - i - 1, setcolor(depth_min, depth_max, h.getT()));
             }
         }
     }

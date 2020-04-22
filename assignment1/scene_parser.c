@@ -192,7 +192,8 @@ Group* SceneParser::parseGroup() {
     // read in the objects
     int count = 0;
     while (num_objects > count) {
-        getToken(token); 
+        getToken(token);
+        // printf("token %s.\n", token);
         if (!strcmp(token, "MaterialIndex")) {
             // change the current material
             int index = readInt();

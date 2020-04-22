@@ -17,15 +17,16 @@ Group::~Group()
 
 bool Group::intersect(const Ray &r, Hit &h, float tmin)
 {
+    bool value = false;
     for(int i=0; i<size; i++)
     {
         Object3D *object = objects[i];
         if(object->intersect(r, h, tmin))
         {
-            return true;
+            value = true;
         }
     }
-    return false;
+    return value;
 }
 
 void Group::addObject(int index, Object3D *obj)

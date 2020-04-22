@@ -29,7 +29,7 @@ public:
     int getNumMaterials() const { return num_materials; }
     Material* getMaterial(int i) const { 
         assert(i >= 0 && i < num_materials); 
-        return materials[i]; }  
+        return materials[i]; }
     Group* getGroup() const { return group; }
 
 private:
