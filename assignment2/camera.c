@@ -15,7 +15,7 @@ OrthographicCamera::OrthographicCamera(Vec3f tcenter, Vec3f tdirection, Vec3f tu
     size = tsize;
     center = tcenter;
     direction = tdirection;
-    horizontal.Cross3(horizontal, tup, tdirection);
+    horizontal.Cross3(horizontal, tup, direction);
     up.Cross3(up, horizontal, direction);
 
     direction.Normalize();
@@ -45,10 +45,13 @@ PerspectiveCamera::PerspectiveCamera(Vec3f &cer, Vec3f &tdirection, Vec3f &tup, 
     angle = tangle;
     direction = tdirection;
     horizontal.Cross3(horizontal, tup, direction);
-    up.Cross3(tup, horizontal, direction);
+    up.Cross3(up, horizontal, direction);
+
     direction.Normalize();
     horizontal.Normalize();
     up.Normalize();
+
+    std::cout << "angle: " << angle << std::endl;
 }
 
 PerspectiveCamera::~PerspectiveCamera()
