@@ -12,15 +12,24 @@ public:
 
 private:
     Vec3f normal;
-    float d;
-    Material *m;
+    float distance;
+    Material *material;
+    Vec3f z_point;
 };
 
-Plane::Plane(Vec3f &tnormal, float td, Material *tm)
+Plane::Plane(Vec3f &tnormal, float d, Material *m)
 {
     normal = tnormal;
-    d = td;
-    m = tm;
+    distance = d;
+    material = m;
+
+    if(normal.x() != 0) {
+        z_point = Vec3f((float)d/tnormal.x(), 0, 0);
+    }else if (normal.y() != 0) {
+        z_point = Vec3f(0, (float)d/tnormal.y(), 0);
+    }else{
+        z_point = Vec3f(0, 0, (float)d/tnormal.z());
+    }
 }
 
 Plane::~Plane()
@@ -31,24 +40,22 @@ bool Plane::intersect(const Ray &r, Hit &h, float tmin)
 {
     Vec3f dir = r.getDirection();
     float tp = normal.Dot3(dir);
-    if(tp == 0)
-    {
+    
+    if(tp >= 0) {
         return false;
     }
-    
-    // float d0, d1, d2;
-    // normal.Get(d0, d1, d2);
-    // Vec3f temp = Vec3f(0, 0, d/d2);
-    // if(tp - t >= tmin)
-    // { 
-    //     if(tp - t < h.getT())
-    //     {
-    //         Vec3f normal = r.pointAtParameter(tp - t) - center;
-    //         normal.Normalize();
-    //         h.set(tp - t, material, normal, r);
-    //     }
-    // }
-    return true;
+
+    Vec3f c2c = r.getOrigin() - z_point;
+    float d = c2c.Dot3(normal);
+    float t = d / -tp;
+
+    if(t >= tmin) {
+        if(t < h.getT()) {
+            h.set(t, material, normal, r);
+            return true;
+        }
+    }
+    return false;
 }
 
 #endif // !_PLANE_H_

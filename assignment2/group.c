@@ -25,6 +25,10 @@ bool Group::intersect(const Ray &r, Hit &h, float tmin)
         {
             value = true;
         }
+        // std::cout<< i << "  " << value << std::endl;
+        // if(i==2 && value==false){
+            // std::cout<< "  " << value << std::endl;
+        // }
     }
     return value;
 }

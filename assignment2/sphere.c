@@ -18,32 +18,49 @@ bool Sphere::intersect(const Ray &r, Hit &h, float tmin)
 
     float tp = c2c.Dot3(dir);
     float d2 = c2c.Dot3(c2c) - tp * tp;
-    if(d2 > radius * radius)
+    if(d2 > radius * radius || tp <= 0)
     {
         return false;
     }
     
     float t = sqrt(radius * radius - d2);
-    if(tp - t >= tmin)
+
+    if(radius == 1 && center.z() == 15)
     {
-        if(tp - t < h.getT())
-        {
-            Vec3f normal = r.pointAtParameter(tp - t) - center;
-            normal.Normalize();
-            h.set(tp - t, material, normal, r);
-        }
-        return true;
+            std::cout 
+        << c2c.Dot3(c2c) << "  " 
+        << r.getDirection() << "  "
+        << tp << "  " 
+        << d2 << "  " 
+        << t << std::endl;
+
     }
 
-    if(tp + t >= tmin)
+    if(tp > t)
     {
-        if(tp + t < h.getT())
+        if(tp - t >= tmin)
         {
-            Vec3f normal = r.pointAtParameter(tp + t) - center;
-            normal.Normalize();
-            h.set(tp + t, material, normal, r);
+            // std::cout << std::endl;
+            if(tp - t < h.getT())
+            {
+                Vec3f normal = r.pointAtParameter(tp - t) - center;
+                normal.Normalize();
+                h.set(tp - t, material, normal, r);
+            }
+            return true;
         }
-        return true;
+    }else
+    {
+        if(tp + t >= tmin)
+        {
+            if(tp + t < h.getT())
+            {
+                Vec3f normal = center - r.pointAtParameter(tp + t);
+                normal.Normalize();
+                h.set(tp + t, material, normal, r);
+            }
+            return true;
+        }        
     }
     return false;
 }

@@ -36,6 +36,7 @@ void saveImage(const char *output_file, SceneParser *sp, int width, int height)
     {
         for(int j=0; j<height; j++)
         {
+            // std::cout << i << " " << j << std::endl;
             Hit h = Hit(FLT_MAX, NULL, Vec3f(0, 0, 1));
             Vec2f point((float)i/width, (float)j/height);
             Ray r = camera->generateRay(point);
@@ -44,7 +45,6 @@ void saveImage(const char *output_file, SceneParser *sp, int width, int height)
                 assert(h.getMaterial() != NULL);
 
                 Vec3f color(ambient * (h.getMaterial())->getDiffuseColor());
-                std::cout << color << std::endl;
                 for(int k=0; k<sp->getNumLights(); k++)
                 {
                     Vec3f dir(0, 0, 0), col(0, 0, 0);
