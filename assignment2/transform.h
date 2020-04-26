@@ -27,8 +27,8 @@ Transform::~Transform()
 
 bool Transform::intersect(const Ray &r, Hit &h, float tmin)
 {
-    Vec3f origin = r.getOrigin(), dir = r.getDirection();
     Matrix temp(matrix);
+    Vec3f origin = r.getOrigin(), dir = r.getDirection();
 
     temp.Inverse();
     temp.Transform(origin);

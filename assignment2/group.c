@@ -18,17 +18,12 @@ Group::~Group()
 bool Group::intersect(const Ray &r, Hit &h, float tmin)
 {
     bool value = false;
-    for(int i=0; i<size; i++)
-    {
+    for(int i=0; i<size; i++) {
         Object3D *object = objects[i];
         if(object->intersect(r, h, tmin))
         {
             value = true;
         }
-        // std::cout<< i << "  " << value << std::endl;
-        // if(i==2 && value==false){
-            // std::cout<< "  " << value << std::endl;
-        // }
     }
     return value;
 }

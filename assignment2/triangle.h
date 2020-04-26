@@ -51,8 +51,8 @@ bool Triangle::intersect(const Ray &r, Hit &h, float tmin)
             normal.Normalize();
 
             h.set(t, material, normal, r);
-            return true;
         }
+        return true;
     }
     return false;
 }
