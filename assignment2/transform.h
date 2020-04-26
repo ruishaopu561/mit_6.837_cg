@@ -21,17 +21,28 @@ Transform::Transform(Matrix &m, Object3D *o)
     matrix = m;
 }
 
-
 Transform::~Transform()
 {
 }
 
 bool Transform::intersect(const Ray &r, Hit &h, float tmin)
 {
-    Vec3f origin = r.getOrigin();
-    matrix.Transform(origin);
+    Vec3f origin = r.getOrigin(), dir = r.getDirection();
+    Matrix temp(matrix);
 
-    return object->intersect(Ray(origin, r.getDirection()), h, tmin);
+    temp.Inverse();
+    temp.Transform(origin);
+
+    if (object->intersect(Ray(origin, dir), h, tmin)) {
+        temp.Transpose();
+
+        Vec3f normal = h.getNormal();
+        temp.Transform(normal);
+        normal.Normalize();
+        h.set(h.getT(), h.getMaterial(), normal, r);
+    	return true;
+    }
+    return false;
 }
 
 #endif // !_TRANSFORM_H_
