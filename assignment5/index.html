@@ -1,0 +1,446 @@
+<html>
+<head>
+<title>6.837 Assignment 5</title>
+</head>
+
+<body background="../../images/blbkgnd.gif" bgcolor="#FFFFFF" text="#000000">
+
+<h1>6.837 Intro to Computer Graphics<br>
+Assignment 5: Voxel Rendering</h1>
+
+<p>
+In this assignment and the next, you will make your ray tracer faster
+using a spatial-acceleration data structure. This week we will focus
+on the implementation of a grid data structure and on fast ray grid
+intersection.  Next week you will use the grid to accelerate your ray
+tracer.
+
+<p>
+To test your grid structure, you will implement the grid as a modeling
+primitive. Volumetric modeling can be implemented by affecting a
+binary opaqueness value for each grid cell. This is the equivalent of
+the discrete pixel representation of 2D images. Each volume element
+(or voxel) will be rendered as a solid cube.  You can easily rasterize
+simple primitives in a grid (similar to pixel rasterization).  For
+example, to rasterize a sphere, simply compare the distance between
+the center of a voxel and the sphere center to the sphere radius.  You
+will use the grid to store the objects of your scene.  In order to
+test your object insertion code, you will render cells that contain
+one or more objects as opaque and use color to visualize the density.
+
+<p>
+Initially, you may assume that no transformations are used.  This way
+you may effectively ignore the group hierarchy and insert all
+primitives by scanning the scene in a depth-first manner.  For the
+later test cases you will need to correctly transform the bounding
+boxes of each primitive before rasterizing it to the grid.
+
+<h3>Tasks</h3>
+
+<ul>
+
+<p>
+<li>Extend your <tt>Object3D</tt> class to include a pointer to a
+    <tt>BoundingBox</tt> instance.  Each subclass should compute its
+    conservative bounding box in its constructor, as appropriate.  As
+    discussed in class, the bounding box of a group is simply the
+    union of the bounding boxes of the contained objects.  The
+    conservative bounding box of a transformed object is computed by
+    transforming the 8 corners of the original bounding box and taking
+    their axis-aligned bounding box.  Add the accessor method
+    <tt>BoundingBox* Object3D::getBoundingBox()</tt>.
+
+<p>
+<ul>
+<li><a href="boundingbox.h">boundingbox.h</a>
+<li><a href="boundingbox.C">boundingbox.C</a>
+</ul>
+
+<p>To avoid creating an infinite bounding box, don't try to compute
+   the bounding box of a <tt>Plane</tt> (the <tt>BoundingBox</tt> of
+   this primitive should be NULL).  Don't include this infinite
+   primitive when computing the bounding box of a group.  Test your
+   bounding box code by printing out the intermediate and scene
+   bounding boxes for various test cases from previous assignments.
+   Make sure your code handles scenes whose bounding box <em>does
+   not</em> include the origin.
+
+<p>
+<li>Derive from <tt>Object3D</tt> a <tt>Grid</tt> class for an
+    axis-aligned uniform grid.  Initially a <tt>Grid</tt> will simply
+    store whether each cell (voxel) is occupied so it can be rendered
+    opaque or transparent. The constructor takes a pointer to the
+    <tt>BoundingBox</tt> of the scene, and three integers describing
+    the number of cells along the three axes.
+
+<pre>
+    Grid::Grid(BoundingBox *bb, int nx, int ny, int nz); 
+</pre>
+
+<p>Internal to your grid class, an array of <em>n<sub>x</sub></em> x
+   <em>n<sub>y</sub></em> x <em>n<sub>z</sub></em> boolean values
+   stores whether each voxel is opaque or transparent.  Later we'll
+   replace this array of booleans with an array of arrays of
+   <tt>Objects3D</tt>.
+
+<p>
+<li>Extend your <tt>Object3D</tt> class with a new method:
+
+<pre>
+   virtual void insertIntoGrid(Grid *g, Matrix *m);
+</pre>
+
+<p>Note that this function is <em>not</em> pure virtual.  Initially
+   this function will do nothing.  Override this function for spheres
+   by implementing the corresponding method for the <tt>Sphere</tt>
+   class.  This method sets the opaqueness of each voxel which
+   <em>may</em> intersect the sphere.  You can do this by comparing
+   the center of voxel to the sphere center and radius.  Your
+   computation should be conservative: you must label cells which
+   might overlap the sphere, but it's also ok to label cells opaque
+   which do not overlap the sphere.  You may ignore the 2nd argument
+   (<tt>Matrix *m</tt>) for this part, it will be used later in the
+   assignment.
+
+<p>
+<li>Extend your <tt>RayTracer</tt> class to have a pointer to a
+    <tt>Grid</tt> instance.  Add support for two new command line
+    arguments: <tt>-grid &lt;nx&gt; &lt;ny&gt; &lt;nz&gt;</tt>, to
+    specify the size of the grid; and <tt>-visualize_grid</tt>, which
+    indicates that the grid occupancy should be drawn instead of the
+    scene objects.  If the <tt>-grid</tt> command line option is not
+    used, the grid will be <tt>NULL</tt>.  Within the
+    <tt>RayTracer</tt> constructor you'll initialize the grid and
+    insert all of the objects in your scene into that grid.  You'll
+    need to write <tt>Group::insertIntoGrid</tt>, which like all group
+    methods simply calls <tt>insertIntoGrid</tt> for all contained
+    objects.  Now you can test your sphere-rasterization routine with
+    the first examples by simply printing the values of the grid's
+    boolean array.
+
+<p>
+<li>Implement <tt>Grid::paint()</tt> to previsualize the occupancy of
+    your grid.  You may simply render 6 quads for each occupied grid
+    cell, or to be more efficient, only draw the faces between
+    occupied and unoccupied cells.  Initially test your code with a
+    very small grid (e.g. 1x1x1), on simple scenes.  Make sure you
+    have specified the correct normals.  
+
+<p>
+<li>Implement ray marching through the grid so that you can also
+    raytrace a visualization of grid occupancy.  <em>Note: By using
+    3DDDA we can do this much more efficiently than computing a
+    ray-box intersection with each voxel!</em> You will only use
+    ray-box intersection to find the initial intersection of the ray
+    with the scene bounding box.
+
+<p>You will need a place to store the information for the current ray
+   and the current grid cell. Implement a <tt>MarchingInfo</tt> class
+   that stores the current value of <em>tmin</em>; the grid indices
+   <em>i</em>, <em>j</em>, and <em>k</em> for the current grid cell;
+   the next values of intersection along each axis (<em>t_next_x</em>,
+   <em>t_next_y</em>, and <em>t_next_z</em>); the marching increments
+   along each axis (<em>d_tx</em>, <em>d_ty</em>, <em>d_tz</em>), and
+   the sign of the direction vector components (<em>sign_x</em>,
+   <em>sign_y</em>, and <em>sign_z</em>).  To render the occupied grid
+   cells for visualization you will also need to store the surface
+   normal of the cell face which was crossed to enter the current
+   cell.  Write the appropriate accessors and modifiers.
+
+<p>
+<li>The intersection of a <tt>Ray</tt> with a <tt>Grid</tt> will use
+    two helper functions to initialize the march and to move to the
+    next cell.  First write:
+
+<pre>
+   void Grid::initializeRayMarch(MarchingInfo &mi, const Ray &r, float tmin) const;
+</pre>
+
+<p>This function computes the marching increments and the information
+   for the first cell traversed by the ray. Make sure to treat all
+   three intersection cases: when the origin is inside the grid, when
+   it is outside and the ray hits the grid, and when it is outside and
+   it misses the grid.  Test your <tt>initializeRayMarch</tt> routine
+   by manually casting simple axis-aligned rays into a low-resolution
+   grid.  Also test more general cases.  Make sure to test ray origins
+   which are inside and outside the scene bounding box.  Next,
+   implement:
+
+<pre>
+   void MarchingInfo::nextCell();
+</pre>
+
+<p>This update routine choose the smallest of the next t values
+   (<em>t_next_x</em>, <em>t_next_y</em>, and <em>t_next_z</em>), and
+   updates the corresponding cell index.  Test your <tt>nextCell</tt>
+   ray marching code using the same strategy as for initialization.
+   Manually compute the marching sequence corresponding to a
+   particular ray and then print the steps taken by your code.  Try
+   other origins and directions to make sure that your code works for
+   all orientations (in particular, test both positive and negative
+   components of the direction).
+
+<p>
+<li>To help you debug your ray marching code, we've added additional
+    previsualization options to the <tt>RayTree</tt> class introduced
+    in the last assignment.  As before, a single ray is traced by
+    pressing the '<tt>t</tt>' key.  Then the '<tt>g</tt>' key will
+    toggle between (1) visualizing all occupied grid cells, (2)
+    visualizing the cells traversed while walking along the ray, and
+    (3) the faces crossed to enter each cell along the ray.
+
+<p>
+<ul>
+<li><a href="rayTree.h">rayTree.h</a>
+<li><a href="rayTree.C">rayTree.C</a>
+<li><a href="glCanvas.h">glCanvas.h</a>
+<li><a href="glCanvas.C">glCanvas.C</a>
+</ul>
+
+<p><tt>GLCanvas::initialize</tt> method has been modified to take in two
+   additional parameters, the <tt>Grid</tt>, and a boolean indicating
+   whether to visualize the grid or not.  Insert the following
+   commands within your <tt>Grid</tt> intersection routines as
+   appropriate:
+
+<pre>
+  void RayTree::AddHitCellFace(Vec3f a, Vec3f b, Vec3f c, Vec3f d, Vec3f normal, Material *m);
+  void RayTree::AddEnteredFace(Vec3f a, Vec3f b, Vec3f c, Vec3f d, Vec3f normal, Material *m);
+</pre>
+
+<p>To specify an entire cell, call <tt>AddHitCellFace</tt> 6 times.
+   In the examples below, a color gradient has been used to show the
+   order in which the cells are traversed (white, purple, ... orange,
+   red).  This gradient is optional, but can be helpful in debugging.
+   To see the ray intersections more clearly, you may wish to turn off
+   the transparent ray rendering in <tt>RayTree::paint()</tt>
+
+<p>
+<li>Now, use the two helpers functions in your ray tracer.  The
+   <tt>Grid::initializeRayMarch</tt> routine should be called at the
+   beginning of the <tt>Grid::intersect routine</tt>.  Once the
+   <tt>MarchingInfo</tt> data structure is initialized,
+   <tt>MarchingInfo::nextCell</tt> should be used to walk through the
+   grid and check for opaque voxels.  If the next cell is
+   opaque/occupied, return the appropriate normal depending on which
+   axis you advanced last.  Verify that your raytraced image looks the
+   same as the OpenGL previsualization.
+
+
+<p>
+<li>Rasterize all scene primitives (but not groups and transforms)
+    into the appropriate cells of the grid.  You'll need to modify the
+    <tt>Grid</tt> class to store pointers to the objects whose
+    bounding box overlaps the cell instead of simply boolean occupancy 
+    values.  We've provided a dynamically resizable vector class,
+    <tt>Object3DVector</tt>, to store an arbitrary number of
+    <tt>Object3D</tt> pointers.  You may use STL (Standard Template
+    Library) instead if you prefer.
+
+<p>
+<ul>
+<li><a href="object3dvector.h">object3dvector.h</a>
+</ul>
+
+<p>In the examples below, a color gradient has been used to visualize
+   the number of primitives which overlap each grid cell.  Cells
+   colored white have just 1 primitive, purple have 2 primitives, ...
+   and cells colored red have many more.  You should implement a
+   similar visualization, but you may use a different color scheme.
+
+<p>
+<li>Finally, extend your implementation to correctly handle
+    transformations.  We could explicitly "flatten" the object
+    hierarchy to create a new scene graph with a single transformation
+    above each primitive.  But it's also easy to just push all the
+    transformations down to the primitive objects.  Now we'll use the
+    2nd argument (<tt>Matrix *m</tt>) to
+    <tt>Object3D::insertIntoGrid</tt> (and it's derived methods).
+    Initially <tt>m = NULL</tt>.  When you encounter a
+    transformation node in the hierarchy you will concatenate it to
+    the previous transformation (if any).  Make sure you apply the
+    transformations in the correct order.
+
+<p>You are not required to handle transformations in your
+   <tt>Sphere::insertIntoGrid</tt> method.  If <tt>m &ne; NULL</tt>,
+   it's ok to fall back on the <tt>Object3D::insertIntoGrid</tt>
+   implementation.  To explicitly call a parent class method, pre-pend
+   the method with the class name:
+
+<pre>
+    this->Object3D::insertIntoGrid(g,m);
+</pre>
+
+<p>NOTE: We won't test or grade your transformation code until the
+   next assignment, so it's ok if this isn't fully implemented or
+   debugged yet.  But we highly recommend that you try to do so now.
+   Test scenes 10, 11, & 12 contain transformations.
+
+</ul>
+
+<h3>Ideas for Extra Credit</h3>
+
+<ul>
+<li>Implement a special case for transformations of triangle
+    primitives to get a tighter bounding box
+
+<li>Test if the plane of the triangles intersects the grid cells (less
+    useful for small triangles)
+
+<li>Volumetric rasterization of other fun implicit objects
+
+</ul>
+
+<p>
+
+<h3>Input Files</h3>
+<p>
+<ul>
+<li><a href="scene5_01_sphere.txt">scene5_01_sphere.txt</a>
+<li><a href="scene5_02_spheres.txt">scene5_02_spheres.txt</a>
+<li><a href="scene5_03_offcenter_spheres.txt">scene5_03_offcenter_spheres.txt</a>
+<li><a href="scene5_04_plane_test.txt">scene5_04_plane_test.txt</a>
+<li><a href="scene5_05_sphere_triangles.txt">scene5_05_sphere_triangles.txt</a>
+<li><a href="scene5_06_bunny_mesh_200.txt">scene5_06_bunny_mesh_200.txt</a>
+<li><a href="scene5_07_bunny_mesh_1k.txt">scene5_07_bunny_mesh_1k.txt</a>
+<li><a href="scene5_08_bunny_mesh_5k.txt">scene5_08_bunny_mesh_5k.txt</a>
+<li><a href="scene5_09_bunny_mesh_40k.txt">scene5_09_bunny_mesh_40k.txt</a>
+<li><a href="scene5_10_scale_translate.txt">scene5_10_scale_translate.txt</a>
+<li><a href="scene5_11_rotated_triangles.txt">scene5_11_rotated_triangles.txt</a>
+<li><a href="scene5_12_nested_transformations.txt">scene5_12_nested_transformations.txt</a>
+</ul>
+
+<h3>New Triangle Models</h3>
+<p>
+<ul>
+<li><a href="bunny_5k.obj">bunny_5k.obj</a>
+<li><a href="bunny_40k.obj">bunny_40k.obj</a>
+</ul>
+
+<hr>
+
+<h3>Sample Results</h3>
+
+
+<pre>
+raytracer -input scene5_01_sphere.txt -size 200 200 -output output5_01a.tga -gui -grid 1 1 1 -visualize_grid
+raytracer -input scene5_01_sphere.txt -size 200 200 -output output5_01b.tga -gui -grid 5 5 5 -visualize_grid
+raytracer -input scene5_01_sphere.txt -size 200 200 -output output5_01c.tga -gui -grid 15 15 15 -visualize_grid
+</pre>
+<img src="viewer5_01a.png">
+<img src="output5_01a.png"><br>
+<img src="viewer5_01b.png">
+<img src="output5_01b.png"><br>
+<img src="viewer5_01c.png">
+<img src="output5_01c.png">
+<p>
+
+<pre>
+raytracer -input scene5_02_spheres.txt -size 200 200 -output output5_02a.tga -gui -grid 15 15 15 -visualize_grid
+raytracer -input scene5_02_spheres.txt -size 200 200 -output output5_02b.tga -gui -grid 15 15 3 -visualize_grid
+</pre>
+<img src="viewer5_02a.png">
+<img src="output5_02a.png"><br>
+<img src="viewer5_02b.png">
+<img src="output5_02b.png">
+<p>
+
+<pre>
+raytracer -input scene5_02_spheres.txt -size 200 200 -gui -grid 8 8 8 -visualize_grid
+</pre>
+<table cellpadding=0 cellspacing=1 border=0>
+<tr><td><center><em>Visualize Hit Cells</em></center></td>
+    <td><center><em>Visualize Entered Faces</em></center></td></tr>
+<tr><td><img src="viewer5_02c_hit_cells.png"></td>
+    <td><img src="viewer5_02c_entered_faces.png"></td></tr>
+<tr><td><img src="viewer5_02d_hit_cells.png"></td>
+    <td><img src="viewer5_02d_entered_faces.png"></td></tr>
+<tr><td><img src="viewer5_02e_hit_cells.png"></td>
+    <td><img src="viewer5_02e_entered_faces.png"></td></tr>
+</table>
+
+<pre>
+raytracer -input scene5_03_offcenter_spheres.txt -size 200 200 -output output5_03.tga -gui -grid 20 20 20 -visualize_grid
+</pre>
+<img src="viewer5_03.png">
+<img src="output5_03.png">
+<p>
+
+<pre>
+raytracer -input scene5_04_plane_test.txt -size 200 200 -gui -tessellation 30 15 -gouraud
+raytracer -input scene5_04_plane_test.txt -size 200 200 -output output5_04.tga -gui -grid 15 15 15 -visualize_grid
+</pre>
+<img src="viewer5_04a.png">
+<img src="viewer5_04b.png">
+<img src="output5_04.png">
+<p>
+
+<pre>
+raytracer -input scene5_05_sphere_triangles.txt -size 200 200 -gui -tessellation 30 15 -gouraud
+raytracer -input scene5_05_sphere_triangles.txt -size 200 200 -output output5_05.tga -gui -grid 20 20 10 -visualize_grid
+</pre>
+<img src="viewer5_05a.png">
+<img src="viewer5_05b.png">
+<img src="output5_05.png">
+<p>
+
+<pre>
+raytracer -input scene5_06_bunny_mesh_200.txt -size 200 200 -output output5_06.tga -gui -grid 10 10 7 -visualize_grid
+raytracer -input scene5_07_bunny_mesh_1k.txt -size 200 200 -output output5_07.tga -gui -grid 15 15 12 -visualize_grid
+raytracer -input scene5_08_bunny_mesh_5k.txt -size 200 200 -output output5_08.tga -gui -grid 20 20 15 -visualize_grid
+raytracer -input scene5_09_bunny_mesh_40k.txt -size 200 200 -output output5_09.tga -gui -grid 40 40 33 -visualize_grid
+</pre>
+<img src="viewer5_06.png">
+<img src="output5_06.png"><br>
+<img src="viewer5_07.png">
+<img src="output5_07.png"><br>
+<img src="viewer5_08.png">
+<img src="output5_08.png"><br>
+<img src="viewer5_09.png">
+<img src="output5_09.png">
+<p>
+
+<pre>
+raytracer -input scene5_10_scale_translate.txt -size 200 200 -gui -tessellation 30 15 -gouraud
+raytracer -input scene5_10_scale_translate.txt -size 200 200 -output output5_10.tga -gui -grid 15 15 15 -visualize_grid
+</pre>
+</pre>
+<img src="viewer5_10a.png">
+<img src="viewer5_10b.png">
+<img src="output5_10.png">
+<p>
+
+<pre>
+raytracer -input scene5_11_rotated_triangles.txt -size 200 200 -gui
+raytracer -input scene5_11_rotated_triangles.txt -size 200 200 -output output5_11.tga -gui -grid 15 15 9 -visualize_grid
+</pre>
+
+<em>Note: the grid voxelization of the green triangle uses an
+optional special case for transformed triangles and will look
+different if you have not implemented this option.</em><br>
+
+<img src="viewer5_11a.png">
+<img src="viewer5_11b.png">
+<img src="output5_11.png">
+<p>
+
+<pre>
+raytracer -input scene5_12_nested_transformations.txt -size 200 200 -gui
+raytracer -input scene5_12_nested_transformations.txt -size 200 200 -output output5_12.tga -gui -grid 30 30 30 -visualize_grid
+</pre>
+
+<em>Note: the grid voxelization of the blue rhombus uses an optional
+special case for transformed triangles and will look different if you
+have not implemented this option.</em><br>
+
+<img src="viewer5_12a.png">
+<img src="viewer5_12b.png">
+<img src="output5_12.png">
+<p>
+
+See the main <a href="../index.html">Assignments Page</a> for submission information.
+<hr>
+</body>
+</html>
+
+

@@ -1,0 +1,492 @@
+<html>
+<head>
+<title>6.837 Assignment 6</title>
+</head>
+
+<body background="../../images/blbkgnd.gif" bgcolor="#FFFFFF" text="#000000">
+
+<h1>6.837 Intro to Computer Graphics<br>
+Assignment 6: Grid Acceleration & Solid Textures</h1>
+
+
+<p>
+In this assignment you will modify your ray tracer to use the grid
+from the previous assignment for fast ray casting. You will use your
+ray marching code and intersect all the objects stored in each
+traversed cell. You must pay attention to intersections outside the
+cell and implement early rejection to stop marching when you have
+found an appropriate intersection.  To measure the performance
+improvement, you will analyze various statistics about your raytracer.
+
+<p>
+Finally, you will add new Material effects where the color of the
+material varies spatially using procedural solid texturing.  This will
+allow you to render checkerboard planes and truly satisfy the
+historical rules of ray-tracing.  Solid textures are a simple way to
+obtain material variation over an object.  Different material
+properties (color, specular coefficients, etc.)  vary as a function of
+spatial location.
+
+
+
+<h3>Tasks</h3>
+
+<ul>
+<p>
+<li>Use the provided static <tt>RayTracingStats</tt> class to compute
+    various statistics including the number of pixels, the number of
+    rays cast, the number of ray/primitive intersection operations,
+    the number of cells in the grid, the number of grid cells
+    traversed with the ray marching technique, and the total running
+    time.  Add the following timing and counter increment functions
+    provided in the <tt>RayTracerStatistics</tt> class to your code:
+
+<p>
+<ul>
+<li><a href="raytracing_stats.h">raytracing_stats.h</a>
+<li><a href="raytracing_stats.C">raytracing_stats.C</a>
+</ul>
+
+<p>Before beginning computation, call:
+<pre>
+   RayTracingStats::Initialize(int _width, int _height, BoundingBox *_bbox,
+			       int nx, int ny, int nz);
+</pre>
+
+<p>For each non-shadow ray cast (a call to <tt>RayTracer::TraceRay()</tt>), call:
+<pre>
+   RayTracingStats::IncrementNumNonShadowRays();
+</pre>
+
+<p>For each shadow ray cast, call:
+<pre>
+   RayTracingStats::IncrementNumShadowRays();
+</pre>
+
+<p>For each ray/primitive intersection operation (each call to
+   <tt>intersect</tt> for non-group and non-transform objects), call:
+   <pre> RayTracingStats::IncrementNumIntersections(); </pre>
+
+<p>For each cell traversed (a call to <tt>MarchingInfo::nextCell()</tt>), call:
+<pre>
+   RayTracingStats::IncrementNumGridCellsTraversed();
+</pre>
+
+<p>From these numbers we can compute the average number of rays per
+   pixel, primitive intersection calls per ray, grid cells per ray,
+   rays per second, etc.  Add support for an additional command line
+   argument, <tt>-stats</tt>. If this option is specified, at the end
+   of your rendering loop, print the various statistics by calling:
+
+<pre>
+   RayTracingStats::PrintStatistics();
+</pre> 
+
+<p>Verify that the statistics are reasonable for simple test scenes
+   without the grid, with and without shadows.  Test this part of the
+   assignment with examples from past assignments.  Note that the
+   number of rays cast and objects intersected can be predicted from
+   the image resolution and number of objects in the scene.
+
+<p>
+<li>Now use the grid as a spatial acceleration for your ray caster.
+    Implement two ray casting methods, <tt>RayCast</tt> and
+    <tt>RayCastFast</tt>.  If no grid is specified at the command
+    line, the grid will be NULL and you should use the non-accelerated
+    ray casting method (<tt>RayCast</tt>) which simply loops through
+    all the objects in the scene as in previous assignments.  If a
+    grid is specified at the command line (<tt>-grid <em>nx</em>
+    <em>ny</em> <em>nz</em></tt>) and <tt>-visualize_grid</tt> is
+    <em>not</em> specified, use the accelerated ray casting method
+    (<tt>RayCastFast</tt>), which marches along the ray through the
+    grid and only tests the ray for intersection with objects in the
+    current cell.  
+
+<p>Make sure that you accelerate all your ray intersection routines,
+   in particular do not forget shadow rays.  Pay attention to objects
+   that overlap multiple cells --- don't incorrectly return
+   intersections outside of the current cell.  Implementation of the
+   marking strategy mentioned in lecture to avoid duplicate
+   ray-primitive intersections for objects that overlap multiple cells
+   is optional (extra credit).
+
+<p>
+<li>Since infinite primitives (e.g., planes) should not be stored in
+    the grid, you'll have to handle them separately.  You'll probably
+    want to add an extra <tt>Object3DVector</tt> to the <tt>Grid</tt>
+    class to store these primitives.  You will always compute the
+    intersections with these primitives and compare them to the
+    closest in-grid intersection.
+
+<p>
+<li>Finish your implementation of the grid rasterization for scene
+    hierarchies that include transformations (flattening the
+    transformation hierarchy).  You'll need to store the accumulated
+    transformation matrix with each primitive.  You can do this by
+    creating a new <tt>Transformation</tt> that wraps around the
+    primitive <tt>Object3D</tt> and store that in the Grid.
+
+<p>
+<li>For each test scene below, render with and without shadows and
+    other recursive rays, with and without the grid, and with
+    different grid sizes.  Convince yourself that the resulting
+    statistics make sense and summarize your findings in your
+    <tt>README.txt</tt>.  You might even discover some bugs or
+    inefficiencies in your code!  Don't copy-paste the statistics from
+    each test case into your README.txt, <em>summarize the results in
+    words</em>.  Put some effort into your analysis, we will be
+    grading it.  Discuss how the various command line or scene
+    parameters affect the running time and suggest how they could be
+    automatically chosen.  Also suggest how particular optimizations
+    might affect the running time or memory used by your
+    implementation.  If you've implemented any bounding-box or
+    grid-related optimizations (for extra credit) you should analyze
+    the performance impact.
+
+<p>
+<li>Next we'll have fun with procedural solid materials.  Derive a
+    class <tt>Checkerboard</tt> from <tt>Material</tt>.  SceneParser
+    has been extended to parse the new material types.
+
+<p>
+<ul>
+<li><a href="scene_parser.h">scene_parser.h</a>
+<li><a href="scene_parser.C">scene_parser.C</a>
+</ul>
+
+<p>The <tt>CheckerBoard</tt> class will store pointers to two
+   <tt>Material</tt>s, and a pointer to a <tt>Matrix</tt> which
+   describes how the world space coordinates are mapped to the 3D
+   solid texture space.  Your solid texture implementation will
+   describe a unit-length axis-aligned checkerboard between the two
+   materials and the matrix will control the size and orientation of
+   checkerboard cells.  The prototype for the constructor is:
+
+<pre>
+  CheckerBoard(Matrix *m, Material *mat1, Material *mat2);
+</pre>
+
+<p>Handle this new material type in the interactive viewer by
+   implementing <tt>CheckerBoard::glSetMaterial()</tt>.  Because
+   OpenGL does not implement general procedural texturing, you will
+   simply call the corresponding <tt>glSetMaterial()</tt> method of
+   the first material.
+
+<p>Implement the <tt>CheckerBoard::shade</tt> routine for ray
+   tracing. You simply need to delegate the work to the <tt>shade</tt>
+   function of the appropriate <tt>Material</tt> of the checkerboard.
+   Using a float-to-integer conversion function <tt>floor</tt> and the
+   function <tt>odd</tt>, devise a boolean function that corresponds
+   to a 3D checkerboard. As a hint, start with the 1D case, just
+   alternated segments of unit length, then generalize to 2 and 3
+   dimensions.  Remember to multiply the intersection point by the
+   matrix to properly transform the materials.
+
+<p>
+<li>Next you'll build materials using Perlin Noise, which lets you to
+    add controllable irregularities to your procedural textures.
+    Here's what Ken Perlin says about his invention (<a
+    href="http://www.noisemachine.com/talk1/">http://www.noisemachine.com/talk1/</a>):
+
+<blockquote>
+<em>Noise appears random, but isn't really. If it were really random,
+    then you'd get a different result every time you call it. Instead,
+    it's "pseudo-random" - it gives the appearance of randomness.  Its
+    appearance is similar to what you'd get if you took a big block of
+    random values and blurred it (ie: convolved with a gaussian
+    kernel). Although that would be quite expensive to compute.  </em>
+    </blockquote>
+
+<p>So we'll use his more efficient (and recently improved)
+   implemenation of noise (<a
+   href="http://mrl.nyu.edu/~perlin/noise/">http://mrl.nyu.edu/~perlin/noise/</a>)
+   translated to C++:
+
+<ul>
+<li><a href="perlin_noise.h">perlin_noise.h</a>
+<li><a href="perlin_noise.C">perlin_noise.C</a>
+</ul>
+
+<p>First derive the class <tt>Noise</tt> from <tt>Material</tt> which
+   computes the function:
+ 
+<pre>
+   N(x,y,z) = noise(x,y,z) + noise(2*x,2*y,2*z)/2 + noise(4*x,4*y,4*z)/4 + ...
+</pre>
+
+<p>for the specified number of octaves.  With just the first octave,
+   the Noise function is very smooth and blobby.  Including additional
+   octaves of higher frequencies adds finer details to the texture.
+   The value of <tt>N(x,y,z)</tt> will be a floating point number that
+   you should clamp and use to interpolate between the two contained
+   <tt>Material</tt>s.  Here's the constructor for <tt>Noise</tt>:
+
+<pre>
+   Noise(Matrix *m, Material *mat1, Material *mat2, int octaves);
+</pre>
+
+<p><b>UPDATE (11/2): You'll need to interpolate the values returned by
+   your <tt>Material::Shade</tt> computation.  In addition, to
+   correctly handle the ambient term and the reflective and
+   transmissive components of materials, you'll need to modify the
+   prototype of some <tt>Material</tt> accessor functions to also take
+   the world space coordinate as an argument.</b>
+
+<p>
+<li>Ken Perlin's original paper and his online notes have many cool
+    examples of procedural textures that can be built from the noise
+    function. You will implement a simple <tt>Marble</tt> material,
+    also a subclass of <tt>Material</tt>.  This shader uses the
+    <tt>sin</tt> function to get bands of color that represent the
+    veins of marble.  These bands are perturbed by the noise function
+    as follows:
+
+<pre>
+    M(x,y,z) = sin (<em>frequency</em> * x + <em>amplitude</em> * N(x,y,z))
+</pre>
+
+<p>Try different parameter settings to understand the variety of
+   appearances you can get.  Remember that this is not a physical
+   simulation of marble, but a procedural texture attempting to
+   imitate our observations.  The constructor for <tt>Marble</tt> is:
+
+<pre>
+   Marble(Matrix *m, Material *mat1, Material *mat2, int octaves, float frequency, float amplitude);
+</pre>
+
+<p>
+<li>For extra credit you can implement a simple <tt>Wood</tt> shader.
+    There are thousands of different types of wood, there is no right
+    answer for how to implement this texture.  We've provided the code
+    to parse some useful parameters -- feel free to modify the
+    parameters as you choose.  The code we've provided expects this
+    constructor:
+
+<pre> 
+    Wood(Matrix *m, Material *mat1, Material *mat2, int octaves, float frequency, float amplitude);
+</pre>
+
+<p>Procedural materials can be used for fun recursive material
+   definitions.  You can have a checkerboard where cells have different
+   refraction and reflection characteristics, or a nested checkerboard
+   containing different wood materials.  The notion of recursive
+   shaders is central to production rendering.
+</ul>
+
+<h3>Additional References</h3>
+
+<ul>
+<li>Robert Cook, "Shade Trees," Computer Graphics, vo]. 18, no. 3, July 1984.
+<li>Darwin R. Peachey, "Solid Texturing and Complex Surfaces", SIGGRAPH vol. 19, no. 3, 1985, pp. 279-286.
+<li>Ken Perlin, "An Image Synthesizer", SIGGRAPH vol. 19, no. 3, 1985, pp. 287-296.
+
+<li>Ken Musgrave: <a href="http://www.kenmusgrave.com/">http://www.kenmusgrave.com/</a>
+<li>Justin Legakis: <a href="http://graphics.lcs.mit.edu/~legakis/MarbleApplet/marbleapplet.html">Marble Applet</a>
+
+</ul>
+
+<h3>Ideas for Extra Credit</h3>
+
+<ul>
+<li>Use marking to prevent duplicate intersections with a primitive
+that overlaps multiple cells,
+<li>Experiment with other acceleration data structures
+(recursive/nested grid, octree, bounding volume
+hierarchy, etc.),
+<li>Implement distribution ray tracing effects,
+<li>Implement the <tt>Wood</tt> material class (test scenes 16 & 18),
+<li>Create a new scene with complex geometry, interesting lighting and/or fun procedural solid textures,
+<li>2D Texture mapping (you'll need to specify a parameterization),
+<li>Phong normal interpolation, bump mapping, etc.
+</ul>
+
+<h3>Input Files</h3>
+<p>
+<ul>
+<li><a href="scene6_01_sphere.txt">scene6_01_sphere.txt</a>
+<li><a href="scene6_02_sphere_triangles.txt">scene6_02_sphere_triangles.txt</a>
+<li><a href="scene6_03_sphere_plane.txt">scene6_03_sphere_plane.txt</a>
+<li><a href="scene6_04_bunny_mesh_200.txt">scene6_04_bunny_mesh_200.txt</a>
+<li><a href="scene6_05_bunny_mesh_1k.txt">scene6_05_bunny_mesh_1k.txt</a>
+<li><a href="scene6_06_bunny_mesh_5k.txt">scene6_06_bunny_mesh_5k.txt</a>
+<li><a href="scene6_07_bunny_mesh_40k.txt">scene6_07_bunny_mesh_40k.txt</a>
+<li><a href="scene6_08_scale_translate.txt">scene6_08_scale_translate.txt</a>
+<li><a href="scene6_09_rotated_triangles.txt">scene6_09_rotated_triangles.txt</a>
+<li><a href="scene6_10_nested_transformations.txt">scene6_10_nested_transformations.txt</a>
+<li><a href="scene6_11_mirrored_floor.txt">scene6_11_mirrored_floor.txt</a>
+<li><a href="scene6_12_faceted_gem.txt">scene6_12_faceted_gem.txt</a>
+<li><a href="scene6_13_checkerboard.txt">scene6_13_checkerboard.txt</a>
+<li><a href="scene6_14_glass_sphere.txt">scene6_14_glass_sphere.txt</a>
+<li><a href="scene6_15_marble_cubes.txt">scene6_15_marble_cubes.txt</a>
+<li><a href="scene6_16_wood_cubes.txt">scene6_16_wood_cubes.txt</a>
+<li><a href="scene6_17_marble_vase.txt">scene6_17_marble_vase.txt</a>
+<li><a href="scene6_18_6.837_logo.txt">scene6_18_6.837_logo.txt</a>
+</ul>
+
+<h3>New Triangle Models</h3>
+<p>
+<ul>
+<li><a href="vase.obj">vase.obj</a>
+<li><a href="6.837.obj">6.837.obj</a>
+</ul>
+
+<hr>
+<h3>Sample Results</h3>
+
+<p>
+Analyze your raytracing statistics for each example and make sure they
+make sense.  In some cases, using the grid may slow you down.  Also,
+the total number of ray-primitive intersection operations may actually
+<em>increase</em> when the grid is added (unless you've implemented
+marking to prevent duplicate intersections between the ray and the
+same primitive).
+
+<p>
+
+<pre>
+raytracer -input scene6_01_sphere.txt -output output6_01a.tga -size 200 200 -stats
+raytracer -input scene6_01_sphere.txt -output output6_01b.tga -size 200 200 -grid 10 10 10 -stats
+raytracer -input scene6_01_sphere.txt -output output6_01c.tga -size 200 200 -grid 10 10 10 -visualize_grid
+</pre>
+<img src="output6_01a.png">
+<img src="output6_01c.png">
+<p>
+
+<pre>
+raytracer -input scene6_02_sphere_triangles.txt -output output6_02a.tga -size 200 200 -stats
+raytracer -input scene6_02_sphere_triangles.txt -output output6_02b.tga -size 200 200 -grid 10 10 10 -stats 
+raytracer -input scene6_02_sphere_triangles.txt -output output6_02c.tga -size 200 200 -stats -shadows
+raytracer -input scene6_02_sphere_triangles.txt -output output6_02d.tga -size 200 200 -grid 10 10 10 -stats -shadows 
+raytracer -input scene6_02_sphere_triangles.txt -output output6_02e.tga -size 200 200 -grid 10 10 10 -visualize_grid
+</pre>
+<img src="output6_02a.png">
+<img src="output6_02c.png">
+<img src="output6_02e.png">
+<p>
+
+<pre>
+raytracer -input scene6_03_sphere_plane.txt -output output6_03a.tga -size 200 200 -stats
+raytracer -input scene6_03_sphere_plane.txt -output output6_03b.tga -size 200 200 -grid 10 10 10 -stats
+raytracer -input scene6_03_sphere_plane.txt -output output6_03c.tga -size 200 200 -stats -shadows
+raytracer -input scene6_03_sphere_plane.txt -output output6_03d.tga -size 200 200 -grid 10 10 10 -stats -shadows
+raytracer -input scene6_03_sphere_plane.txt -output output6_03e.tga -size 200 200 -grid 10 10 10 -visualize_grid
+</pre>
+<img src="output6_03a.png">
+<img src="output6_03c.png">
+<img src="output6_03e.png">
+<p>
+
+<pre>
+raytracer -input scene6_04_bunny_mesh_200.txt -output output6_04a.tga -size 200 200 -stats
+raytracer -input scene6_04_bunny_mesh_200.txt -output output6_04b.tga -size 200 200 -grid 10 10 7 -stats
+raytracer -input scene6_04_bunny_mesh_200.txt -output output6_04c.tga -size 200 200 -stats -shadows
+raytracer -input scene6_04_bunny_mesh_200.txt -output output6_04d.tga -size 200 200 -grid 10 10 7 -stats -shadows
+raytracer -input scene6_04_bunny_mesh_200.txt -output output6_04e.tga -size 200 200 -grid 10 10 7 -visualize_grid
+raytracer -input scene6_05_bunny_mesh_1k.txt  -output output6_05.tga -size 200 200 -grid 15 15 12 -stats -shadows
+raytracer -input scene6_06_bunny_mesh_5k.txt  -output output6_06.tga -size 200 200 -grid 20 20 15 -stats -shadows
+raytracer -input scene6_07_bunny_mesh_40k.txt -output output6_07.tga -size 200 200 -grid 40 40 33 -stats -shadows
+</pre>
+<img src="output6_04a.png">
+<img src="output6_04c.png">
+<img src="output6_04e.png"><br>
+<img src="output6_05.png">
+<img src="output6_06.png">
+<img src="output6_07.png">
+<p>
+
+<pre>
+raytracer -input scene6_08_scale_translate.txt -size 200 200 -output output6_08a.tga
+raytracer -input scene6_08_scale_translate.txt -size 200 200 -output output6_08b.tga -grid 15 15 15
+raytracer -input scene6_08_scale_translate.txt -size 200 200 -output output6_08c.tga -grid 15 15 15 -visualize_grid
+</pre>
+</pre>
+<img src="output6_08a.png">
+<img src="output6_08c.png">
+<p>
+
+<pre>
+raytracer -input scene6_09_rotated_triangles.txt -size 200 200 -output output6_09a.tga
+raytracer -input scene6_09_rotated_triangles.txt -size 200 200 -output output6_09b.tga -grid 15 15 9 
+raytracer -input scene6_09_rotated_triangles.txt -size 200 200 -output output6_09c.tga -grid 15 15 9 -visualize_grid
+</pre>
+
+<em>Note: the grid voxelization of the green triangle uses an
+optional special case for transformed triangles and will look
+different if you have not implemented this option.</em><br>
+
+<img src="output6_09a.png">
+<img src="output6_09c.png">
+<p>
+
+<pre>
+raytracer -input scene6_10_nested_transformations.txt -size 200 200 -output output6_10a.tga
+raytracer -input scene6_10_nested_transformations.txt -size 200 200 -output output6_10b.tga -grid 30 30 30
+raytracer -input scene6_10_nested_transformations.txt -size 200 200 -output output6_10c.tga -grid 30 30 30 -visualize_grid
+</pre>
+
+<em>Note: the grid voxelization of the blue rhombus uses an optional
+special case for transformed triangles and will look different if you
+have not implemented this option.</em><br>
+
+<img src="output6_10a.png">
+<img src="output6_10c.png">
+<p>
+
+<pre>
+raytracer -input scene6_11_mirrored_floor.txt -size 200 200 -output output6_11a.tga -shadows -bounces 1 -weight 0.01 -stats
+raytracer -input scene6_11_mirrored_floor.txt -size 200 200 -output output6_11b.tga -shadows -bounces 1 -weight 0.01 -grid 40 10 40 -stats
+raytracer -input scene6_11_mirrored_floor.txt -size 200 200 -output output6_11c.tga -grid 40 10 40 -visualize_grid
+</pre>
+<img src="output6_11a.png">
+<img src="output6_11c.png">
+<p>
+
+<pre>
+raytracer -input scene6_12_faceted_gem.txt -size 200 200 -output output6_12a.tga -shadows -shade_back -bounces 5 -weight 0.01 -stats
+raytracer -input scene6_12_faceted_gem.txt -size 200 200 -output output6_12b.tga -shadows -shade_back -bounces 5 -weight 0.01 -grid 20 20 20 -stats
+raytracer -input scene6_12_faceted_gem.txt -size 200 200 -output output6_12c.tga -grid 20 20 20 -visualize_grid
+</pre>
+<img src="output6_12a.png">
+<img src="output6_12c.png">
+<p>
+
+<pre>
+raytracer -input scene6_13_checkerboard.txt -size 200 200 -output output6_13.tga -shadows 
+raytracer -input scene6_14_glass_sphere.txt -size 200 200 -output output6_14.tga -shadows -shade_back -bounces 5 -weight 0.01 -grid 20 20 20
+</pre>
+<img src="output6_13_fix.png">
+<img src="output6_14_fix.png">
+<p>
+
+<pre>
+raytracer -input scene6_15_marble_cubes.txt -size 300 300 -output output6_15.tga 
+raytracer -input scene6_16_wood_cubes.txt -size 300 300 -output output6_16.tga 
+</pre>
+<img src="output6_15_fix.png">
+<img src="output6_16_fix.png">
+<p>
+
+<pre>
+raytracer -input scene6_17_marble_vase.txt -size 300 300 -output output6_17a.tga -grid 15 30 15 -bounces 1 -shadows
+raytracer -input scene6_17_marble_vase.txt -size 300 300 -output output6_17b.tga -grid 15 30 15 -visualize_grid
+</pre>
+<b>UPDATE (11/2): this new image correctly handles procedural textures
+with a large ambient light contribution.</b>
+<br>
+<img src="output6_17a_fix.png">
+<img src="output6_17b.png">
+<p>
+
+<pre>
+raytracer -input scene6_18_6.837_logo.txt -size 400 200 -output output6_18a.tga -shadows -shade_back -bounces 5 -weight 0.01 -grid 80 30 3
+raytracer -input scene6_18_6.837_logo.txt -size 400 200 -output output6_18b.tga -grid 80 30 3 -visualize_grid
+</pre>
+<img src="output6_18a_fix.png">
+<img src="output6_18b.png">
+<p>
+
+
+See the main <a href="../index.html">Assignments Page</a> for submission information.
+<hr>
+</body>
+</html>

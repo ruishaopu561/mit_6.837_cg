@@ -1,0 +1,370 @@
+<html>
+<head>
+<title>6.837 Assignment 8</title>
+</head>
+
+<body background="../../images/blbkgnd.gif" bgcolor="#FFFFFF" text="#000000">
+<h1>6.837 Intro to Computer Graphics<br>
+Assignment 8: Curves & Surfaces</h1>
+
+In this assignment you will complete the implementation for a simple
+2D spline editor.  You will support both Bezier and BSplines, and
+convert between the two curves (for bicubic splines with exactly 4
+control points).  Once your curves are working you will move on to
+creating surfaces from these curves: surfaces of revolution and
+bicubic Bezier patches.  
+
+<p>
+This assignment is not highly coupled with the previous assignments.
+We are giving you a significant new code base (the
+<em>curve_editor</em>).  You'll just use your OpenGL previsualization
+(from assignment 3) to view the triangle meshes you create.
+
+<h3>Tasks</h3>
+
+<ul>
+<p>
+<li>In this assignment you will implement a base class <tt>Spline</tt>
+    from which you will derive <tt>Curve</tt>, <tt>BezierCurve</tt>,
+    <tt>BSplineCurve</tt>, <tt>Surface</tt>,
+    <tt>SurfaceOfRevolution</tt>, and <tt>BezierPatch</tt> as
+    illustrated in the diagram below.  Organize your code to allow
+    reuse where possible and avoid copy-pasting similar code, as this
+    makes it hard to debug later.  See the spline_parser.C file for
+    the expected constructors.
+
+<p>
+<img src="classes.png">
+
+<p>In order to get your code to compile, you'll have to create some
+   temporarily empty procedures in your Spline class.  (Each is
+   described below).  Some of these may be pure virtual, depending on
+   your implementation.  
+
+<pre>
+  // FOR VISUALIZATION
+  virtual void Spline::Paint(ArgParser *args);
+
+  // FOR CONVERTING BETWEEN SPLINE TYPES
+  virtual void Spline::OutputBezier(FILE *file);
+  virtual void Spline::OutputBSpline(FILE *file);
+
+  // FOR CONTROL POINT PICKING
+  virtual int Spline::getNumVertices();
+  virtual Vec3f Spline::getVertex(int i);
+
+  // FOR EDITING OPERATIONS
+  virtual void Spline::moveControlPoint(int selectedPoint, float x, float y);
+  virtual void Spline::addControlPoint(int selectedPoint, float x, float y);
+  virtual void Spline::deleteControlPoint(int selectedPoint);
+
+  // FOR GENERATING TRIANGLES
+  virtual TriangleMesh* Spline::OutputTriangles(ArgParser *args);
+</pre>
+
+<p>
+<li>Implement the <tt>Paint(ArgParser*)</tt> function for the
+    <tt>Curve</tt> classes.  As in the example images below, you'll
+    want to render the control points, the control polygon and the
+    actual spline curve.  The <tt>-curve_tessellation &lt;n&gt;</tt>
+    command line argument will dictate the spacing of your samples ---
+    where you evaluate Q(t) to approximate the spline.  Useful OpenGL
+    commands will be <tt>glBegin(GL_POINTS)</tt>,
+    <tt>glBegin(GL_LINES)</tt>, <tt>glPointSize(int)</tt>,
+    <tt>glLineWidth(int)</tt> and <tt>glColor3f(float,float,float)</tt>.
+
+<p>For the first part of the assignment you may want to assume that
+   your Bezier & BSpline curves have exactly 4 control points.
+
+<p>
+<li>Next, implement the conversion between Bezier and BSplines.  That
+    is, given a set of Bezier control points, find the (unique) set of
+    BSpline control points that produce the same curve.  As seen in
+    lecture we can compute this by manipulating the matrix equation
+    that describes the spline:  
+
+<p>
+<em>
+&nbsp; &nbsp; &nbsp; &nbsp; Q(t) = G<sub>bezier</sub>B<sub>bezier</sub>T = G<sub>bspline</sub>B<sub>bspline</sub>T
+</em>
+
+<p>Remember, <em>Q</em> is the curve, parameterized by <em>t</em>.
+   <em>T</em> is the power basis, a vector of all the powers of
+   <em>t</em> up to the degree of our curve (for this assignment
+   [<em>t</em><sup>3</sup> <em>t</em><sup>2</sup> <em>t</em>
+   1]<sup>T</sup>).  <em>B<sub>bezier</sub></em> and
+   <em>B<sub>bspline</sub></em> are the spline basis matrix functions
+   which are constant for each type of spline.  And finally
+   <em>G<sub>bezier</sub></em> and <em>G<sub>bspline</sub></em>
+   represent the control point geometry.  Each control point is a
+   column in the <em>G</em> matrix.
+
+<p>The test cases below will help you verify that you've correctly
+   solved the matrix equation to convert between these two types of
+   splines.  The command line option <tt>-output_bezier
+   &lt;filename&gt;</tt> or <tt>-output_bspline &lt;filename&gt;</tt>
+   will indicate which representation you should use when you save the
+   splines.  Implement the <tt>OutputBezier(FILE *file)</tt> and
+   <tt>OutputBSpline(FILE *file)</tt> functions.
+
+<p>
+<li>Next, generalize your implementation of Bezier & BSpline curves to
+    handle input with more than 4 control points.  By considering only
+    a window of 4 control points at one time, the spline will be
+    locally cubic.  For BSplines this generalization is very elegant:
+    simply slide a window over one control point at a time.  However,
+    for Bezier curves the solution is a little less elegant.  Two
+    neighboring curves will only share one control point and thus the
+    G<sup>1</sup> or C<sup>1</sup> continuity at the joint depends on
+    the neighboring control points.  A BSpline with <em>n</em>+3
+    control points is composed of <em>n</em> 4-point BSplines.  A
+    Bezier curve with 3*<em>n</em>+1 control points is composed of
+    <em>n</em> 4-point Bezier curves.
+
+<p>You're only required to implement the Bezier to BSpline and
+   BSpline to Bezier conversion for curves with exactly 4 control
+   points.  Converting curves with > 4 control points is worth extra
+   credit.  (There are different ways to do it.)
+
+<p>
+<li>To hook up the control point editing we've provided, you'll need
+    to give the <tt>SplineParser::Pick(...)</tt> and
+    <tt>SplineParser::PickEdge(...)</tt> functions access to your Curve
+    data structures.  You'll do this by providing the <tt>getNumVertices()</tt>
+    and <tt>getVertex(int i)</tt> functions.
+
+<p>Implement the <tt>moveControlPoint(...)</tt>,
+   <tt>addControlPoint(...)</tt> and <tt>deleteControlPoint(...)</tt>
+   functions to complete the curve editing implementation.  Notice
+   that by adding or deleting a control point, you will not have a
+   round number of Bezier control point windows.  You may choose to
+   disallow adding or deleting control points on Bezier curves, or
+   implement a control point duplication strategy to compensate.  Also
+   you may wish to disallow deletions if there are exactly 4 control
+   points.
+   
+<p>Once completed, the left mouse button is used to move a control
+   point (the mouse down click must be within 10 pixels of a control
+   point), the middle mouse button adds a control point on an edge (if
+   the mouse down click is within 10 pixels of an edge) and the right
+   mouse button deletes a control point (again if there is one within
+   10 pixels of the down click).  Hitting the 's' key will save the
+   geometry both in the spline format and the triangle mesh format (as
+   specified on the command line).
+
+<p>
+<li>Next implement the SurfaceOfRevolution class.  You may assume the
+    curve will always spin around the y axis (x = 0, z = 0).  We've
+    provided the <tt>TriangleMesh</tt> and <tt>TriangleNet</tt>
+    classes to help you generate regularly tessellated quadrilateral
+    patches of triangles (when <tt>OutputTriangles(...)</tt> is
+    called).  To use the <tt>TriangleNet</tt> class, simply specify
+    the number of faces you'd like along each dimension.  Then you
+    simply specify the vertex positions for the grid corners (note
+    this is one bigger in each dimension.)  Two command line arguments
+    control the tessellation of a Surface of Revolution:
+    <tt>-curve_tessellation &lt;n&gt;</tt> and
+    <tt>-revolution_tessellation &lt;n&gt;</tt>.
+
+<p>You'll probably find the <tt>TriangleMesh::Merge(const TriangleMesh
+   &m)</tt> function useful for combining multiple meshes into a single
+   file.
+
+<p>
+<li>Finally, implement a 4x4 Bezier Patch with 16 contol points.
+    Instead of having just a single parameter <em>t</em> (as with the
+    curves), you'll be given two parameters, <em>t</em> and
+    <em>s</em>.  First use <em>t</em> to interpolate along the 4
+    parallel 4-point Bezier curves of the patch.  Then use the
+    <em>s</em> parameter to interpolate in the perpendicular direction
+    between those 4 resulting points.  The command line argument
+    <tt>-patch_tessellation &lt;n&gt;</tt> controls the tessellation
+    of the patch.
+
+<p>You do not need to implement 3 dimensional editing of the control
+   point grid for either the <tt>SurfaceOfRevolution</tt> or
+   <tt>BezierPatch</tt>.  (This is mostly a user interface issue, and
+   has no "good" solution).
+
+<p>
+<li>Now you should be able to process the original teapot geometry
+    (taken from <em>Jim Blinn's Corner: A Trip Down the Graphics
+    Pipeline</em>) which consists of several Bezier curves swept
+    around the y axis, and a collection of 4x4 Bezier patches.  You'll
+    just output a collection of polygons that can be rendered in your
+    raytracer.  Unfortunately the model is missing the bottom and has
+    other nasty non-watertight intersection issues, so we can't render
+    it with refraction.
+
+</ul>
+
+<h3>Ideas for Extra Credit</h3>
+<ul>
+
+<li>Implement a visualization of de Casteljau's algorithm for Bezier
+    Splines and the mechanical construction subdivion for BSplines.
+
+<li>Implement an interpolating spline and compare to the corresponding
+    Bezier & BSpline curves.
+
+<li>Extend your Bezier to BSpline and BSpline to Bezier conversions to
+    handle curves with more than 4 control points.  Note there are
+    some tricky issues here with degrees of freedom and the number of
+    control points.
+
+<li>Implement Gouraud shading for curved objects.  You'll need to
+    store the ideal normal with each vertex when you create an .obj
+    file, and parse this information when the file is loaded by your
+    raytracer.
+</ul>
+
+<h3>New Code Base for this Assignment</h3>
+
+<em>You may modify these files as you wish, but you should only need
+to create the new classes described above.</em>
+
+<ul>
+<li><a href="vectors.h">vectors.h</a>
+<li><a href="matrix.h">matrix.h</a>
+<li><a href="matrix.C">matrix.C</a>
+<li><a href="arg_parser.h">arg_parser.h</a>
+<li><a href="glCanvas.h">glCanvas.h</a>
+<li><a href="glCanvas.C">glCanvas.C</a>
+<li><a href="spline_parser.h">spline_parser.h</a>
+<li><a href="spline_parser.C">spline_parser.C</a>
+<li><a href="triangle_mesh.h">triangle_mesh.h</a>
+<li><a href="triangle_mesh.C">triangle_mesh.C</a>
+<li><a href="main.C">main.C</a>
+<p>
+<li><a href="Makefile">Makefile</a> (for Athena Linux)
+</ul>
+
+<h3>Input Files</h3>
+<ul>
+<li><a href="spline8_01_bezier.txt">spline8_01_bezier.txt</a>
+<li><a href="spline8_02_bspline.txt">spline8_02_bpline.txt</a>
+<li><a href="spline8_03_bezier.txt">spline8_03_bezier.txt</a>
+<li><a href="spline8_04_bspline.txt">spline8_04_bspline.txt</a>
+<li><a href="spline8_05_bspline_dups.txt">spline8_05_bspline_dups.txt</a>
+<li><a href="spline8_06_torus.txt">spline8_06_torus.txt</a>
+<li><a href="spline8_07_vase.txt">spline8_07_vase.txt</a>
+<li><a href="spline8_08_bezier_patch.txt">spline8_08_bezier_patch.txt</a>
+<li><a href="spline8_09_teapot.txt">spline8_09_teapot.txt</a>
+</ul>
+
+<ul>
+<li><a href="scene8_06_torus_low.txt">scene8_06_torus_low.txt</a>
+<li><a href="scene8_06_torus_high.txt">scene8_06_torus_high.txt</a>
+<li><a href="scene8_07_vase_low.txt">scene8_07_vase_low.txt</a>
+<li><a href="scene8_07_vase_high.txt">scene8_07_vase_high.txt</a>
+<li><a href="scene8_08_bezier_patch_low.txt">scene8_08_bezier_patch_low.txt</a>
+<li><a href="scene8_08_bezier_patch_med.txt">scene8_08_bezier_patch_med.txt</a>
+<li><a href="scene8_08_bezier_patch_high.txt">scene8_08_bezier_patch_high.txt</a>
+<li><a href="scene8_09_teapot_low.txt">scene8_09_teapot_low.txt</a>
+<li><a href="scene8_09_teapot_high.txt">scene8_09_teapot_high.txt</a>
+<li><a href="scene8_10_transparent_vase.txt">scene8_10_transparent_vase.txt</a>
+<li><a href="scene8_11_reflective_teapot.txt">scene8_11_reflective_teapot.txt</a>
+</ul>
+
+
+
+<h3>Sample Output</h3>
+
+<pre>
+curve_editor -input spline8_01_bezier.txt -gui -curve_tessellation 30
+curve_editor -input spline8_02_bspline.txt -gui -curve_tessellation 30
+</pre>
+<img src="editor8_01.png">
+<img src="editor8_02.png">
+<p>
+
+<pre>
+curve_editor -input spline8_01_bezier.txt -output_bezier output8_01_bezier.txt
+curve_editor -input spline8_01_bezier.txt -output_bspline output8_01_bspline.txt
+curve_editor -input spline8_02_bspline.txt -output_bezier output8_02_bezier.txt
+curve_editor -input spline8_02_bspline.txt -output_bspline output8_02_bspline.txt
+curve_editor -input output8_01_bezier.txt -gui -curve_tessellation 30
+curve_editor -input output8_01_bspline.txt -gui -curve_tessellation 30
+curve_editor -input output8_02_bezier.txt -gui -curve_tessellation 30
+curve_editor -input output8_02_bspline.txt -gui -curve_tessellation 30
+</pre>
+<img src="editor8_01a.png">
+<img src="editor8_01b.png"><br>
+<img src="editor8_02a.png">
+<img src="editor8_02b.png">
+<p>
+
+<pre>
+curve_editor -input spline8_03_bezier.txt -gui -curve_tessellation 30
+curve_editor -input spline8_04_bspline.txt -gui -curve_tessellation 30
+curve_editor -input spline8_05_bspline_dups.txt -gui -curve_tessellation 30
+</pre>
+<img src="editor8_03.png">
+<img src="editor8_04.png">
+<img src="editor8_05.png">
+<p>
+
+<pre>
+curve_editor -input spline8_06_torus.txt -curve_tessellation 4 -gui
+curve_editor -input spline8_06_torus.txt -curve_tessellation 4 -revolution_tessellation 10 -output torus_low.obj
+curve_editor -input spline8_06_torus.txt -curve_tessellation 30 -revolution_tessellation 60 -output torus_high.obj
+raytracer -input scene8_06_torus_low.txt -gui -size 300 300
+raytracer -input scene8_06_torus_high.txt -gui -size 300 300
+</pre>
+<img src="editor8_06.png">
+<img src="viewer8_06_low.png">
+<img src="viewer8_06_high.png">
+<p>
+
+<pre>
+curve_editor -input spline8_07_vase.txt -curve_tessellation 4 -output_bspline output8_07_edit.txt -gui
+curve_editor -input output8_07_edit.txt -curve_tessellation 4 -revolution_tessellation 10 -output vase_low.obj
+curve_editor -input output8_07_edit.txt -curve_tessellation 10 -revolution_tessellation 60 -output vase_high.obj
+raytracer -input scene8_07_vase_low.txt -gui -size 300 300
+raytracer -input scene8_07_vase_high.txt -gui -size 300 300
+</pre>
+<img src="editor8_07_before.png">
+<img src="editor8_07_after.png"><br>
+<img src="viewer8_07_low.png">
+<img src="viewer8_07_high.png">
+<p>
+
+<pre>
+curve_editor -input spline8_08_bezier_patch.txt -gui
+curve_editor -input spline8_08_bezier_patch.txt -patch_tessellation 4 -output patch_low.obj
+curve_editor -input spline8_08_bezier_patch.txt -patch_tessellation 10 -output patch_med.obj
+curve_editor -input spline8_08_bezier_patch.txt -patch_tessellation 40 -output patch_high.obj
+raytracer -input scene8_08_bezier_patch_low.txt -gui -size 300 300
+raytracer -input scene8_08_bezier_patch_med.txt -gui -size 300 300
+raytracer -input scene8_08_bezier_patch_high.txt -gui -size 300 300
+</pre>
+<img src="viewer8_08_low.png">
+<img src="viewer8_08_med.png">
+<img src="viewer8_08_high.png">
+<p>
+
+<pre>
+curve_editor -input spline8_09_teapot.txt -curve_tessellation 4 -gui
+curve_editor -input spline8_09_teapot.txt -patch_tessellation 4 -curve_tessellation 4 -revolution_tessellation 10 -output teapot_low.obj
+curve_editor -input spline8_09_teapot.txt -patch_tessellation 30 -curve_tessellation 30 -revolution_tessellation 100 -output teapot_high.obj
+raytracer -input scene8_09_teapot_low.txt -gui -size 300 300
+raytracer -input scene8_09_teapot_high.txt -gui -size 300 300
+</pre>
+<img src="editor8_09.png">
+<img src="viewer8_09_low.png">
+<img src="viewer8_09_high.png">
+<p>
+
+<pre>
+curve_editor -input output8_07_edit.txt -curve_tessellation 20 -revolution_tessellation 100 -output vase_very_high.obj
+raytracer -input scene8_10_transparent_vase.txt -output output8_10.tga -grid 30 30 30 -size 300 300 -bounces 4 -shade_back -jittered_samples 9 -tent_filter 1.0 -shadows
+raytracer -input scene8_11_reflective_teapot.txt -output output8_11.tga -grid 50 30 30 -size 300 300 -bounces 4 -shade_back -jittered_samples 9 -tent_filter 1.0 -shadows
+</pre>
+<img width=300 src="output8_10.png">
+<img width=300 src="output8_11.png">
+
+<p>
+See the main <a href="../index.html">Assignments Page</a> for submission information.
+<hr>
+</body>
+</html>

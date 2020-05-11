@@ -1,0 +1,421 @@
+<html>
+<head>
+<title>6.837 Assignment 4</title>
+</head>
+
+<body background="../../images/blbkgnd.gif" bgcolor="#FFFFFF" text="#000000">
+
+<h1>6.837 Intro to Computer Graphics<br>
+Assignment 4: Shadows, Reflection & Refraction</h1>
+
+
+<p>
+This week, we add global illumination to our Ray Caster.  Because we
+cast secondary rays to account for shadows, reflection and refraction,
+we can now call it a Ray Tracer.  You will encapsulate the high-level
+computation in a <tt>RayTracer</tt> class that will be responsible for
+sending rays and recursively computing colors along them.
+
+<p>
+To compute cast shadows, you will send rays from the visible point to
+each light source. If an intersection is reported, the visible point is
+in shadow and the contribution from that light source is ignored. Note
+that shadow rays must be sent to all light sources.  To add reflection
+and refraction effects, you need to send secondary rays in the mirror
+and transmitted directions, as explained in lecture. The computation
+is recursive to account for multiple reflections and or refractions.
+
+<p>
+For debugging we provide you with code to visualize the ray tree
+created while computing the color of a single pixel.
+
+<h3>Tasks</h3>
+
+<ul>
+
+<li>Expand your Material classes to store the reflective & transparent
+    multipliers and the index of refraction, which are necessary for
+    recursive ray tracing.  The prototype for the
+    <tt>PhongMaterial</tt> constructor should be:
+
+<pre>
+  PhongMaterial::PhongMaterial(const Vec3f &diffuseColor, 
+                               const Vec3f &specularColor, 
+                               float exponent,
+                               const Vec3f &reflectiveColor, 
+                               const Vec3f &transparentColor, 
+                               float indexOfRefraction); 
+</pre>
+
+<p>You should also implement appropriate accessor functions for these
+   fields.
+
+<p>
+<li>Create a new class <tt>RayTracer</tt> that computes the radiance
+    (color) along a ray. Update your main function to use this class
+    for the rays through each pixel.  This class encapsulates the
+    computation of radiance (color) along rays. It stores a pointer to
+    the <tt>SceneParser</tt> for access to the geometry and light
+    sources.  Your constructor should have these arguments (and maybe
+    others, depending on how you handle command line arguments):
+
+<pre>
+   RayTracer(SceneParser *s, int max_bounces, float cutoff_weight, bool shadows, ...);
+</pre>
+
+<p>The main method of this class is <tt>traceRay</tt> that, given a
+   ray, computes the color seen from the origin along the direction.
+   This computation is recursive for reflected or transparent
+   materials.  We therefore need a stopping criterion to prevent
+   infinite recursion.  <tt>traceRay</tt> takes as additional
+   parameters the current number of bounces (recursion depth) and a
+   ray weight that indicates the percent contribution of this ray to
+   the final pixel color.  The corresponding maximum recursion depth
+   and the cutoff ray weight are fields of <tt> RayTracer</tt>, which
+   are passed as command line arguments to the program.  Note that
+   weight is a scalar that corresponds to the magnitude of the color
+   vector.
+
+<pre>
+  Vec3f traceRay(Ray &ray, float tmin, int bounces, float weight, 
+                 float indexOfRefraction, Hit &hit) const;
+</pre>
+
+<p>To refract rays through transparent objects, <tt>traceRay</tt> is
+   also passed the <tt>indexOfRefraction</tt> (see below), and returns
+   the closest intersection in <tt>hit</tt>, which is used to create
+   the depth & normal visualizations.  You can test your code at this
+   point with examples from previous assignments.
+
+<p>
+<li>Add support for the new command line arguments: <tt>-shadows</tt>,
+    which indicates that shadow rays are to be cast, and
+    <tt>-bounces</tt> and <tt>-weight</tt>, which control the depth of
+    recursion in your ray tracer.
+
+<p>
+<li>Implement cast shadows by sending rays toward each light source to
+    test whether the line segment joining the intersection point and
+    the light source intersects an object. If there is an
+    intersection, then discard the contribution of that light
+    source. Recall that you must displace the ray origin slightly away
+    from the surface, or equivalently set <tt>tmin</tt> as
+    <em>epsilon</em>. Note that in this naive version,
+    semi-transparent objects still cast opaque shadows. Implement
+    something better for extra credit.
+
+<p>
+<li>Implement mirror reflections for reflective materials
+    (<tt>getReflectiveColor()</tt> &gt; (0,0,0)) by sending a ray from
+    the current intersection point in the mirror direction. For this,
+    we suggest you write a function:
+
+<pre>
+   Vec3f mirrorDirection(const Vec3f &normal, const Vec3f &incoming);
+</pre>
+
+<p>Trace the secondary ray with a recursive call to <tt>traceRay</tt>
+   using modified values for the recursion depth and ray weight. The
+   ray weight is simply multiplied by the magnitude of the reflected
+   color. Make sure that <tt>traceRay</tt> checks the appropriate
+   stopping conditions.  Add the reflected contribution to the color
+   computed for the current ray.  Don't forget to take into account
+   the reflection coefficient of the material.
+
+<p>
+<li>Implement transparency effects by sending rays recursively in the
+    refracted direction.  If the material is transparent
+    (<tt>getTransparentColor()</tt> &gt; (0,0,0)), trace a new ray in
+    the transmitted direction. We suggest you implement a function
+    <tt>transmittedDirection</tt> that given an incident vector, a
+    normal and the indices of refraction, returns the transmitted
+    direction.
+
+<pre>
+   bool transmittedDirection(const Vec3f &normal, const Vec3f &incoming, 
+      float index_i, float index_t, Vec3f &transmitted);
+</pre>
+
+<p>We make the simplifying assumption that our transparent objects
+   exist in a vacuum, with no intersecting or nested refracting
+   materials.  This allows us to determine the incident and
+   transmitted index of refraction simply by looking at the dot
+   product between the normal and the incoming ray.  You may assume
+   that the camera is always placed outside of transparent objects.
+
+<p>However, be careful about the direction of the vectors and the
+   ratio of refraction indices.  Because we now consider transparent
+   objects, we might hit the surface of a primitive from either side,
+   depending on whether we were inside or outside the object.  The
+   <tt>-shade_back</tt> command line option should be used when there
+   are transparent objects in the scene.
+
+<p>The dot product of the normal and ray direction is negative when we
+   are outside the object, and positive when we are inside. You will
+   use this to detect whether the new index of refraction is 1 or the
+   index of the hit object.  Also, the index of refraction for the
+   material surrounding the ray origin is passed as an argument to
+   <tt>traceRay</tt>.
+
+<p>
+<li>We provide a <tt>RayTree</tt> visualization tool to help you debug
+    your recursive ray implementation.  This tool is activated by
+    pressing the '<tt>t</tt>' key within the OpenGL previsualization.
+    Insert the following commands within your
+    <tt>Raytracer::traceRay()</tt> method as appropriate:
+
+<pre>
+   void RayTree::SetMainSegment(const Ray &ray, float tstart, float tstop);
+   void RayTree::AddShadowSegment(const Ray &ray, float tstart, float tstop);
+   void RayTree::AddReflectedSegment(const Ray &ray, float tstart, float tstop);
+   void RayTree::AddTransmittedSegment(const Ray &ray, float tstart, float tstop);
+</pre>
+
+<p>The main ray is visualized in gray, shadow rays green, reflected
+   rays red and transmitted rays blue.  You will not create an
+   instance of <tt>RayTree</tt>, but rather just call the static
+   member functions.  The calls will look something like:
+
+<pre>
+   RayTree::SetMainSegment(myRay,0,t);
+</pre>
+
+<p>Most of the time these function calls do nothing.  But when the
+   <tt>RayTree</tt> is activated, the segments of the ray tree will be
+   recorded.  The <tt>glCanvas::initialize</tt> method now requires a
+   third argument:
+
+<pre>
+   void initialize(SceneParser *_scene, void (*_renderFunction)(void), void (*_traceRayFunction)(float, float));
+</pre>
+
+<p>You'll need to provide a function that takes in two floating point
+   numbers, the x and y coordinates in screenspace (0,0) -> (1,1)
+   of the current mouse position, and traces the ray through the
+   scene. Your call to <tt>traceRay</tt> from within
+   <tt>traceRayFunction</tt> should look very similar to your call to
+   <tt>traceRay</tt> from within your main rendering loop.  Note: all
+   the activation/deactivation of the <tt>RayTree</tt> is taken care
+   of in <tt>GLCanvas::keyboard()</tt>.
+
+<ul>
+<li><a href="rayTree.h">rayTree.h</a>
+<li><a href="rayTree.C">rayTree.C</a>
+<li><a href="glCanvas.h">glCanvas.h</a>
+<li><a href="glCanvas.C">glCanvas.C</a>
+</ul>
+
+<p>
+<li>Incorporate the updated code for point light sources and verify
+    that your shading and shadowing implementation correctly renders
+    these lights.  The <tt>PointLight</tt> source method
+    <tt>getIllumination()</tt> method handles the distance attenuation
+    term needed for Phong shading.  The physically correct attenuation
+    term, 1/d<sup>2</sup>, is not always used for raytracing because
+    it results in images with high contrast that are difficult to
+    properly display on low dynamic range devices.  Often 1/d or
+    constant attenuation is used instead (see examples below).
+
+<p>
+<ul>
+<li><a href="light.h">light.h</a>
+<li><a href="light.C">light.C</a>
+</ul>
+
+</ul>
+
+<h3>Hints</h3>
+<ul>
+<p>
+<li>You do not need to declare all methods in a class virtual, only
+    the ones which subclasses will override.
+<p>
+<li>Print as much information as you need for debugging. When you get
+    weird results, don't hesitate to use simple cases, and do the
+    calculations manually to verify your results.  Perhaps instead of
+    casting all the rays needed to create an image, just cast a single
+    ray (and its corresponding ray tree).
+<p>
+<li>Modify the test scenes to reduce complexity for debugging: remove
+    objects, remove light sources, change the parameters of the
+    materials so that you can view the contributions of the different
+    components, etc.
+<p>
+<li>Comment your code, we take this into account when grading. 
+</ul>
+
+<h3>Ideas for Extra Credit</h3>
+
+<ul>
+<li>Render semi-transparent shadows where the attenuation depends on
+   the distance traveled in the transparent object; nested refracting
+   materials; shadow ray acceleration using early termination and
+   without returning the normal and material; Fresnel reflection term;
+   other BRDF models such as Cook-Torrance or Ward; anisotropic BRDFs,
+   etc.
+</ul>
+
+<h3>Updated Scene Parser</h3>
+
+<ul>
+<li><a href="scene_parser.h">scene_parser.h</a>
+<li><a href="scene_parser.C">scene_parser.C</a>
+</ul>
+
+<h3>Input Files</h3>
+<p>
+<ul>
+
+<li><a href="scene4_01_sphere_shadow.txt">scene4_01_sphere_shadow.txt</a>
+<li><a href="scene4_02_colored_shadows.txt">scene4_02_colored_shadows.txt</a>
+<li><a href="scene4_03_mirrored_floor.txt">scene4_03_mirrored_floor.txt</a>
+<li><a href="scene4_04_reflective_sphere.txt">scene4_04_reflective_sphere.txt</a>
+<li><a href="scene4_05_transparent_bar.txt">scene4_05_transparent_bar.txt</a>
+<li><a href="scene4_06_transparent_bars.txt">scene4_06_transparent_bars.txt</a>
+<li><a href="scene4_07_transparent_sphere_1.0.txt">scene4_07_transparent_sphere_1.0.txt</a>
+<li><a href="scene4_08_transparent_sphere_1.1.txt">scene4_08_transparent_sphere_1.1.txt</a>
+<li><a href="scene4_09_transparent_sphere_2.0.txt">scene4_09_transparent_sphere_2.0.txt</a>
+<li><a href="scene4_10_point_light_distance.txt">scene4_10_point_light_distance.txt</a>
+<li><a href="scene4_11_point_light_circle.txt">scene4_11_point_light_circle.txt</a>
+<li><a href="scene4_12_point_light_circle_d_attenuation.txt">scene4_12_point_light_circle_d_attenuation.txt</a>
+<li><a href="scene4_13_point_light_circle_d2_attenuation.txt">scene4_13_point_light_circle_d2_attenuation.txt</a>
+<li><a href="scene4_14_faceted_gem.txt">scene4_14_faceted_gem.txt</a>
+
+</ul>
+
+<h3>Triangle Meshes (.obj format)</h3>
+<p>
+<ul>
+
+<li><a href="diamond.obj">diamond.obj</a>
+</ul>
+
+<h3>Sample Results</h3>
+
+
+<pre>
+raytracer -input scene4_01_sphere_shadow.txt -size 200 200 -output output4_01.tga -shadows 
+</pre>
+<img src="output4_01.png">
+<p>
+<pre>
+raytracer -input scene4_02_colored_shadows.txt -size 200 200 -output output4_02.tga -shadows -gui -tessellation 50 25 -gouraud
+</pre>
+<img src="viewer4_02a.png">
+<img src="viewer4_02b.png">
+<img src="output4_02.png">
+<p>
+<pre>
+raytracer -input scene4_03_mirrored_floor.txt -size 200 200 -output output4_03.tga -shadows -bounces 1 -weight 0.01 -gui
+</pre>
+<img src="viewer4_03a.png">
+<img src="viewer4_03b.png">
+<img src="viewer4_03c.png">
+<img src="output4_03.png">
+<p>
+<pre>
+raytracer -input scene4_04_reflective_sphere.txt -size 200 200 -output output4_04a.tga -shadows -bounces 0 -weight 0.01
+raytracer -input scene4_04_reflective_sphere.txt -size 200 200 -output output4_04b.tga -shadows -bounces 1 -weight 0.01
+raytracer -input scene4_04_reflective_sphere.txt -size 200 200 -output output4_04c.tga -shadows -bounces 2 -weight 0.01
+raytracer -input scene4_04_reflective_sphere.txt -size 200 200 -output output4_04d.tga -shadows -bounces 3 -weight 0.01
+</pre>
+<img src="output4_04a.png">
+<img src="output4_04b.png">
+<img src="output4_04c.png">
+<img src="output4_04d.png">
+<p>
+<pre>
+raytracer -input scene4_05_transparent_bar.txt -size 200 200 -output output4_05.tga -shadows -bounces 10 -weight 0.01 -shade_back -gui
+</pre>
+<img src="viewer4_05.png">
+<img src="output4_05.png">
+<p>
+<pre>
+raytracer -input scene4_06_transparent_bars.txt -size 200 200 -output output4_06a.tga -shadows -bounces 0 -weight 0.01 -shade_back -gui
+raytracer -input scene4_06_transparent_bars.txt -size 200 200 -output output4_06b.tga -shadows -bounces 1 -weight 0.01 -shade_back -gui
+raytracer -input scene4_06_transparent_bars.txt -size 200 200 -output output4_06c.tga -shadows -bounces 2 -weight 0.01 -shade_back -gui
+raytracer -input scene4_06_transparent_bars.txt -size 200 200 -output output4_06d.tga -shadows -bounces 3 -weight 0.01 -shade_back -gui
+raytracer -input scene4_06_transparent_bars.txt -size 200 200 -output output4_06e.tga -shadows -bounces 4 -weight 0.01 -shade_back -gui
+raytracer -input scene4_06_transparent_bars.txt -size 200 200 -output output4_06f.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui
+</pre>
+
+<img src="output4_06a.png">
+<img src="output4_06b.png">
+<img src="output4_06c.png"><br>
+<img src="output4_06d.png">
+<img src="output4_06e.png">
+<img src="output4_06f.png">
+<p>
+<em>With OPTIONAL transparent_shadows</em>
+<br>
+<img src="output4_06a_ts.png">
+<img src="output4_06b_ts.png">
+<img src="output4_06c_ts.png"><br>
+<img src="output4_06d_ts.png">
+<img src="output4_06e_ts.png">
+<img src="output4_06f_ts.png">
+<p>
+<pre>
+raytracer -input scene4_07_transparent_sphere_1.0.txt -size 200 200 -output output4_07.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui -tessellation 30 15
+raytracer -input scene4_08_transparent_sphere_1.1.txt -size 200 200 -output output4_08.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui -tessellation 30 15
+raytracer -input scene4_09_transparent_sphere_2.0.txt -size 200 200 -output output4_09.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui -tessellation 30 15
+</pre>
+<img src="viewer4_07.png">
+<img src="viewer4_08.png">
+<img src="viewer4_09.png"><br>
+<img src="output4_07.png">
+<img src="output4_08.png">
+<img src="output4_09.png">
+<p>
+<em>With OPTIONAL transparent_shadows</em>
+<br>
+<img src="output4_07_ts.png">
+<img src="output4_08_ts.png">
+<img src="output4_09_ts.png">
+<p>
+<pre>
+raytracer -input scene4_10_point_light_distance.txt -size 200 200 -output output4_10.tga -shadows -gui
+</pre>
+<img src="viewer4_10a.png">
+<img src="viewer4_10b.png">
+<img src="output4_10.png">
+<p>
+<pre>
+raytracer -input scene4_11_point_light_circle.txt -size 200 200 -output output4_11.tga -shadows 
+raytracer -input scene4_12_point_light_circle_d_attenuation.txt -size 200 200 -output output4_12.tga -shadows 
+raytracer -input scene4_13_point_light_circle_d2_attenuation.txt -size 200 200 -output output4_13.tga -shadows 
+</pre>
+<img src="output4_11.png">
+<img src="output4_12.png">
+<img src="output4_13.png">
+<p>
+<pre>
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -output output4_14a.tga -shadows -shade_back -bounces 0 -weight 0.01 
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -output output4_14b.tga -shadows -shade_back -bounces 1 -weight 0.01 
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -output output4_14c.tga -shadows -shade_back -bounces 2 -weight 0.01 
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -output output4_14d.tga -shadows -shade_back -bounces 3 -weight 0.01 
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -output output4_14e.tga -shadows -shade_back -bounces 4 -weight 0.01 
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -output output4_14f.tga -shadows -shade_back -bounces 5 -weight 0.01 
+</pre>
+<img src="output4_14a.png">
+<img src="output4_14b.png">
+<img src="output4_14c.png"><br>
+<img src="output4_14d.png">
+<img src="output4_14e.png">
+<img src="output4_14f.png">
+<p>
+
+<pre>
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -shadows -shade_back -bounces 1 -weight 0.01 -gui
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -shadows -shade_back -bounces 2 -weight 0.01 -gui
+raytracer -input scene4_14_faceted_gem.txt -size 200 200 -shadows -shade_back -bounces 3 -weight 0.01 -gui
+</pre>
+<img src="viewer4_14b.png">
+<img src="viewer4_14c.png">
+<img src="viewer4_14d.png">
+
+<p>
+See the main <a href="../index.html">Assignments Page</a> for submission information.
+<hr>
+</body>
+</html>

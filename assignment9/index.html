@@ -1,0 +1,358 @@
+<html>
+<head>
+<title>6.837 Assignment 9</title>
+</head>
+
+<body background="../../images/blbkgnd.gif" bgcolor="#FFFFFF" text="#000000">
+<h1>6.837 Intro to Computer Graphics<br>
+Assignment 9: Particle Systems</h1>
+
+<p>In this assignment you will play around with Particle Systems.  In
+   the new code base, we provide the <tt>GLCanvas</tt> and
+   <tt>System</tt> classes that manage the user interface and a
+   dynamically-resizeable set of particles (<tt>Particle</tt> and
+   <tt>ParticleSet</tt>).  The <tt>System::Update</tt> method is
+   called at a regular time interval (provided on the command line as
+   the option <tt>-refresh &lt;seconds&gt;</tt>).  The <tt>Update</tt>
+   function advances the simulation forward in time (by the amount
+   specified with the command line option <tt>-dt
+   &lt;seconds&gt;</tt>).
+
+<p>Once the particle system has been launched you can interact with it
+   through a simple gui.  Use the mouse to rotate or zoom the scene.
+   Hit 'p' to pause the simulation, and 'p' again to unpause it.  When
+   paused you can hit 's' to perform a single step of integration.
+   You can also restart the simulation by hitting 'r'.  To restart the
+   system, all existing particles are deleted and any state stored
+   within the system (including all random number generators) should
+   be reset.  We provide a simple random number generator class (see
+   random.h) which generates a reproducible stream of pseudo-random
+   numbers.  By using the <tt>Random</tt> class instead of
+   <tt>drand48()</tt> you can use multiple identical random number
+   streams to directly compare various particle system options (the
+   velocity or position randomness, the integration scheme, etc.)
+
+<p>You can also specify various rendering options at the command line.
+   By default each particle is drawn as a large dot of the particle's
+   current color.  The <tt>-integrator_color</tt> option colors the
+   particles based on integration scheme.  The <tt>-draw_vectors
+   &lt;acceleration_scale&gt;</tt> option draws the velocity vector in
+   the same color as the particle, and a scaled version of the
+   acceleration vector in white.  This should be helpful when
+   debugging your force fields and your integration scheme.  Finally
+   the <tt>-motion_blur</tt> option draws a thin line between the
+   particle's current position and its last position.
+
+
+<h3>Tasks</h3>
+
+<ul>
+
+<p>
+<li>Implement a base class <tt>ForceField</tt> and derive from this
+    class the subclasses: <tt>GravityForceField</tt>,
+    <tt>ConstantForceField</tt>, <tt>RadialForceField</tt> and
+    <tt>VerticalForceField</tt>.  The primary method for a force field
+    is:
+
+<pre>
+   virtual Vec3f ForceField::getAcceleration(const Vec3f &position, float mass, float t) const = 0;
+</pre>
+
+<p>Remember from physics that <em>f = ma</em>, so if your field is
+   specified with forces, you'll need to divide by the mass of the
+   particle to get the acceleration.  On the other hand, if your field
+   is specified with acceleration ("local" earth gravity is a field of
+   constant acceleration) you don't want to divide by the mass.
+
+<p>Acceleration can vary based on position.  To test your integrators
+   you'll implement a <tt>RadialForceField</tt> that always pulls
+   particles towards the origin.  The strength of the force is
+   proportional to the distance from the origin.  Also implement a
+   <tt>VerticalForceField</tt> that pulls particles towards the y = 0
+   plane (again the strength of the force is proportional to the
+   distance from the plane).  The constructors for the subclasses look
+   like this:
+
+<pre>
+   GravityForceField(Vec3f gravity);
+   ConstantForceField(Vec3f force);
+   RadialForceField(float magnitude);
+   VerticalForceField(float magnitude);
+</pre>
+
+<p>The force field acceleration can also vary based on time.  For
+   extra credit you can implement a time-varying field to imitate
+   wind or other phenomena.  Perlin Noise (from assignment 6) can be
+   used to make nice random looking force fields (for extra credit).
+
+<p>
+<li>Implement a base class <tt>Integrator</tt> and derive from it the
+    <tt>EulerIntegrator</tt> and <tt>MidpointIntegrator</tt>
+    subclasses.  (Implementing Trapezoid or Runge Kutta integration is
+    worth extra credit).  The prototype for the main method of the
+    integrator class looks like this:
+
+<pre>
+   virtual void Update(Particle *particle, ForceField *forcefield, float t, float dt) = 0;
+</pre>
+
+<p>This method advances (with stepsize <tt>dt</tt>) the particle's
+position & velocity through the force field.  If it's not a
+time-varying forcefield, <tt>t</tt> (the current time) will be
+ignored.  The Integrator::Update method should also adjust the
+particle's age (<tt>call Particle::increaseAge()</tt>).  Remember from
+class that the Euler method updates the particle as follows:<br>
+
+&nbsp; &nbsp; &nbsp;  p<sub>n+1</sub> = p<sub>n</sub> + v<sub>n</sub> * dt<br>
+&nbsp; &nbsp; &nbsp;  v<sub>n+1</sub> = v<sub>n</sub> + a(p<sub>n</sub>, t) * dt<br>
+
+<p>And the Midpoint method takes a half Euler step and uses that velocity to update the particle:<br>
+&nbsp; &nbsp; &nbsp;  p<sub>m</sub> = p<sub>n</sub> + v<sub>n</sub> * dt/2<br>
+&nbsp; &nbsp; &nbsp;  v<sub>m</sub> = v<sub>n</sub> + a(p<sub>n</sub>, t) * dt/2<p>
+
+&nbsp; &nbsp; &nbsp;  p<sub>n+1</sub> = p<sub>n</sub> + v<sub>m</sub> * dt<br>
+&nbsp; &nbsp; &nbsp;  v<sub>n+1</sub> = v<sub>n</sub> + a(p<sub>m</sub>, t+dt/2) * dt<br>
+
+<p>a(p,t) is the acceleration at point p, at time t.  Each integrator
+   also has a method <tt>Vec3f getColor()</tt> which returns a color
+   for visualization when comparing different integration schemes.
+
+<p>
+<li>The last thing to do is is create the particles.  Implement the
+    base class <tt>Generator</tt>, with subclasses
+    <tt>HoseGenerator</tt> and <tt>RingGenerator</tt>.  The code we
+    provide expects a number of methods for each generator (some may
+    be virtual, some may be pure virtual depending on your
+    implementation):
+
+<pre>
+  // initialization
+  void Generator::SetColors(Vec3f color, Vec3f dead_color, float color_randomness);
+  void Generator::SetLifespan(float lifespan, float lifespan_randomness, int desired_num_particles);
+  void Generator::SetMass(float mass, float mass_randomness);
+
+  // on each timestep, create some particles
+  int Generator::numNewParticles(float current_time, float dt) const;
+  Particle* Generator::Generate(float current_time, int i);
+
+  // for the gui
+  void Generator::Paint() const;
+  void Generator::Restart();
+</pre>
+
+<p>The first 3 methods set some common particle parameters.  Each of
+   these has an optional randomness component.  Not all of the
+   possibilities for randomness are exercised in the examples below.
+
+<p>The next two methods are helper functions for the
+   <tt>System::Update</tt> function.  On each timestep the generator
+   is asked how many new particles should be created.  To maintain a
+   roughly constant number of particles throughout the simulation
+   (desired_num_particles), <em>dt * desired_num_particles /
+   lifespan</em> particles should be created on each timestep.  If the
+   number of particles varies throughout the simulation (e.g., the
+   fire ring), you'll need to do something else.  The
+   <tt>Generate</tt> method takes 2 arguments (the current time and an
+   integer between 0 and n-1, where n is the number of new particles
+   for this timestep).
+
+<p>Finally, the <tt>Paint()</tt> method draws any geometry related to
+   the generator.  In the fire example below a polygon is drawn to
+   represent the ground plane.  The <tt>Restart</tt> method reseeds
+   the random number generator for the class to ensure that the
+   particle simulation is exactly reproducible.
+
+<p>The generator subclass constructors look like this:
+
+<pre>
+   HoseGenerator(Vec3f position, float position_randomness, Vec3f velocity, float velocity_randomness);
+   RingGenerator(float position_randomness, Vec3f velocity, float velocity_randomness);
+</pre>
+
+<p>The hose generates particles from a point in space
+   (<tt>position</tt>) in a particular direction (<tt>velocity</tt>).
+   Both position & velocity can be tweaked with randomness.  The ring
+   generator has similar arguments, except the particles are placed
+   (with randomness) on an expanding ring from the origin.  The radius
+   of the ring depends on time.  To keep the density of the ring
+   constant, the number of particles created per time step increases.
+   Caution: we provide you with a dynamically-resizeable array for
+   particles, but don't get carried away generating particles -- your
+   machine does have memory limits!  In the fire ring example below
+   the whole scene is shifted down by -4 units in y.
+
+
+<p>
+<li>NOTE: Particle systems (like solid textures) are an art form.
+    Your results for test cases 4-7 should match very closely to the
+    sample images below.  But the other test cases depend on exactly
+    how you incorporate randomness, or on how you tweak your fire
+    density, etc.  There is no single correct answer for these test
+    cases, just make sure you understand how your implementation
+    corresponds to your results, and have fun!  Feel free to modify
+    the base implementation we've provided or make new test cases.
+    Just submit everything and document your changes/additions in your
+    <tt>README.txt</tt> file.
+
+</ul>
+
+<h3>References</h3>
+
+<ul>
+<li>
+<a href="http://www.siggraph.org/education/materials/HyperGraph/animation/particle.htm">SIGGRAPH education materials on Particle Systems (includes Star Trek video)</a>
+<li>
+<a href="http://www.pixar.com/companyinfo/research/pbm2001/">SIGGRAPH course notes on Physically Based Modeling (from Pixar)</a>
+</ul>
+
+
+<h3>Ideas for Extra Credit</h3>
+
+<ul>
+<li>Implement Trapezoid or Runge Kutta integration.
+<li>Design and implement a test scene for a fun, new particle generator.
+<li>Implement time-varying force fields and/or use Perlin Noise to generate force fields.
+<li>Implement particle collisions with external objects, like a sphere or plane (no particle-particle collisions).
+<li>Add damping forces.
+<li>Add particle-particle interactions (e.g., n-body problem, Lennard Jones forces, etc.)
+<li>Burning planets, water fountains, fireworks, etc., etc., etc.
+</ul>
+
+
+<h3>New Code Base for this Assignment</h3>
+
+<em>You may modify these files as you wish, but you should only need
+to create the new classes described above.</em>
+
+<ul>
+<li><a href="vectors.h">vectors.h</a>
+<li><a href="matrix.h">matrix.h</a>
+<li><a href="matrix.C">matrix.C</a>
+<li><a href="particle.h">particle.h</a>
+<li><a href="particle.C">particle.C</a>
+<li><a href="particleSet.h">particleSet.h</a>
+<li><a href="random.h">random.h</a>
+<li><a href="system.h">system.h</a>
+<li><a href="system.C">system.C</a>
+<li><a href="parser.h">parser.h</a>
+<li><a href="parser.C">parser.C</a>
+<li><a href="glCanvas.h">glCanvas.h</a>
+<li><a href="glCanvas.C">glCanvas.C</a>
+<li><a href="main.C">main.C</a>
+<p>
+<li><a href="Makefile">Makefile</a> (for Athena Linux)  <b>FIXED  11/18</b>
+</ul>
+
+
+<h3>Input Files</h3>
+
+<ul>
+<li><a href="system9_01_hose.txt">system9_01_hose.txt</a>
+<li><a href="system9_02_hose_gravity.txt">system9_02_hose_gravity.txt</a>
+<li><a href="system9_03_hose_force.txt">system9_03_hose_force.txt</a>
+<li><a href="system9_04_circle_euler.txt">system9_04_circle_euler.txt</a>
+<li><a href="system9_05_circle_midpoint.txt">system9_05_circle_midpoint.txt</a>
+<li><a href="system9_06_circle_rungekutta.txt">system9_06_circle_rungekutta.txt</a>
+<li><a href="system9_07_wave.txt">system9_07_wave.txt</a>
+<li><a href="system9_08_fire.txt">system9_08_fire.txt</a>
+<li><a href="system9_09_wind.txt">system9_09_wind.txt</a>
+
+</ul>
+
+<h3>Sample Results</h3>
+
+<pre>
+particle_system -input system9_01_hose.txt -refresh 0.1  -dt 0.1 
+particle_system -input system9_01_hose.txt -refresh 0.05 -dt 0.05
+particle_system -input system9_01_hose.txt -refresh 0.1  -dt 0.1  -motion_blur
+particle_system -input system9_01_hose.txt -refresh 0.05 -dt 0.05 -motion_blur
+</pre>
+<img src="viewer9_01a.png">
+<img src="viewer9_01b.png"><br>
+<img src="viewer9_01c.png">
+<img src="viewer9_01d.png">
+<p>
+
+<pre>
+particle_system -input system9_02_hose_gravity.txt -refresh 0.05 -dt 0.05 -draw_vectors 0.1
+particle_system -input system9_02_hose_gravity.txt -refresh 0.05 -dt 0.05 -motion_blur
+</pre>
+<img src="viewer9_02a.png">
+<img src="viewer9_02b.png">
+<img src="viewer9_02c.png">
+<p>
+
+<pre>
+particle_system -input system9_03_hose_force.txt -refresh 0.05 -dt 0.05 -draw_vectors 0.1
+particle_system -input system9_03_hose_force.txt -refresh 0.05 -dt 0.05 -motion_blur
+</pre>
+<img src="viewer9_03a.png">
+<img src="viewer9_03b.png">
+<img src="viewer9_03c.png">
+<p>
+
+<pre>
+particle_system -input system9_04_circle_euler.txt -refresh 0.1  -dt 0.1  -integrator_color -draw_vectors 0.02
+particle_system -input system9_04_circle_euler.txt -refresh 0.05 -dt 0.05 -integrator_color -motion_blur
+particle_system -input system9_04_circle_euler.txt -refresh 0.01 -dt 0.01 -integrator_color -motion_blur
+</pre>
+<img src="viewer9_04a.png">
+<img src="viewer9_04b.png">
+<img src="viewer9_04c.png">
+<p>
+
+<pre>
+particle_system -input system9_05_circle_midpoint.txt -refresh 0.1  -dt 0.1  -integrator_color -draw_vectors 0.02
+particle_system -input system9_05_circle_midpoint.txt -refresh 0.05 -dt 0.05 -integrator_color -motion_blur
+particle_system -input system9_05_circle_midpoint.txt -refresh 0.01 -dt 0.01 -integrator_color -motion_blur
+</pre>
+<img src="viewer9_05a.png">
+<img src="viewer9_05b.png">
+<img src="viewer9_05c.png">
+<p>
+
+<pre>
+particle_system -input system9_06_circle_rungekutta.txt -refresh 0.1  -dt 0.1  -integrator_color -draw_vectors 0.02
+particle_system -input system9_06_circle_rungekutta.txt -refresh 0.05 -dt 0.05 -integrator_color -motion_blur
+particle_system -input system9_06_circle_rungekutta.txt -refresh 0.01 -dt 0.01 -integrator_color -motion_blur
+</pre>
+<em>Implementation of the Runge Kutta integrator is optional (extra credit).</em><br>
+<img src="viewer9_06a.png">
+<img src="viewer9_06b.png">
+<img src="viewer9_06c.png">
+<p>
+
+<pre>
+particle_system -input system9_07_wave.txt -refresh 0.01 -dt 0.2  -integrator_color -motion_blur
+particle_system -input system9_07_wave.txt -refresh 0.01 -dt 0.05 -integrator_color -motion_blur
+particle_system -input system9_07_wave.txt -refresh 0.01 -dt 0.01 -integrator_color -motion_blur
+</pre>
+<em>Implementation of the Runge Kutta integrator is optional (extra credit).</em><br>
+<img src="viewer9_07a.png">
+<img src="viewer9_07b.png">
+<img src="viewer9_07c.png">
+<p>
+
+<pre>
+particle_system -input system9_08_fire.txt -refresh 0.05 -dt 0.05  -motion_blur
+</pre>
+<img src="viewer9_08a.png">
+<img src="viewer9_08b.png">
+<img src="viewer9_08c.png">
+<p>
+
+<pre>
+particle_system -input system9_09_wind.txt -motion_blur -dt 0.05 -refresh 0.05
+</pre>
+<em>Implementation of the Wind force field is optional (extra credit).</em><br>
+<img src="viewer9_09a.png">
+<img src="viewer9_09b.png">
+<img src="viewer9_09c.png">
+<p>
+
+
+See the main <a href="../index.html">Assignments Page</a> for submission information.
+<hr>
+</body>
+</html>
