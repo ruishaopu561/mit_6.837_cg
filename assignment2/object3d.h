@@ -11,6 +11,7 @@ public:
     Material *material;
 
     Object3D() {};
+    Object3D(Material *_material):material(_material) {};
     ~Object3D() {};
     virtual bool intersect(const Ray &r, Hit &h, float tmin) = 0;
 private:

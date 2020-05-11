@@ -6,25 +6,17 @@
 class Triangle : public Object3D
 {
 public:
-       Triangle(Vec3f &, Vec3f &, Vec3f &, Material *);
-    ~Triangle();
+    Triangle(Vec3f &, Vec3f &, Vec3f &, Material *);
     virtual bool intersect(const Ray &r, Hit &h, float tmin);
 
 private:
-    Vec3f a, b, c;
-    Material *material;
+    Vec3f a, b, c, normal;
 };
 
-Triangle::Triangle(Vec3f &ta, Vec3f &tb, Vec3f &tc, Material *tm)
+Triangle::Triangle(Vec3f &ta, Vec3f &tb, Vec3f &tc, Material *tm):Object3D(tm), a(ta), b(tb), c(tc) 
 {
-    a = ta;
-    b = tb;
-    c = tc;
-    material = tm;
-}
-
-Triangle::~Triangle()
-{
+    Vec3f::Cross3(normal, b-a, c-a);
+    normal.Normalize();
 }
 
 bool Triangle::intersect(const Ray &r, Hit &h, float tmin)
@@ -43,13 +35,6 @@ bool Triangle::intersect(const Ray &r, Hit &h, float tmin)
 
     if(t >= tmin) {
         if(t < h.getT()) {
-            Vec3f normal;
-            normal.Cross3(normal, b-a, c-a);
-            if(normal.Dot3(r.getDirection()) > 0) {
-                normal.Cross3(normal, b-a, a-c);
-            }
-            normal.Normalize();
-
             h.set(t, material, normal, r);
         }
         return true;

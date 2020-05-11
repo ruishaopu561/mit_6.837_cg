@@ -3,46 +3,49 @@
 
 #include "object3d.h"
 #include "vectors.h"
+#include "matrix.h"
 
 class Transform : public Object3D
 {
 public:
     Transform(Matrix &m, Object3D *o);
-    ~Transform();
     virtual bool intersect(const Ray &r, Hit &h, float tmin);
 private:
     Object3D *object;
     Matrix matrix;
+    Matrix matrix_inv;
+	Matrix matrix_inv_tr;
 };
 
 Transform::Transform(Matrix &m, Object3D *o)
 {
     object = o;
     matrix = m;
-}
 
-Transform::~Transform()
-{
+    matrix_inv = matrix;
+    matrix_inv.Inverse();
+    matrix_inv_tr = matrix_inv;
+    matrix_inv_tr.Transpose();
 }
 
 bool Transform::intersect(const Ray &r, Hit &h, float tmin)
 {
-    Matrix temp(matrix);
     Vec3f origin = r.getOrigin(), dir = r.getDirection();
 
-    temp.Inverse();
-    temp.Transform(origin);
+    matrix_inv.Transform(origin);
+    matrix_inv.TransformDirection(dir);
+    // float scale = dir.Length();
+    // dir.Normalize();
 
-    if (object->intersect(Ray(origin, dir), h, tmin)) {
-        temp.Transpose();
-
+    bool hit = object->intersect(Ray(origin, dir), h, tmin);
+    if (hit) {
         Vec3f normal = h.getNormal();
-        temp.Transform(normal);
+        matrix_inv_tr.TransformDirection(normal);
         normal.Normalize();
         h.set(h.getT(), h.getMaterial(), normal, r);
-    	return true;
+        // h.set(h.getT() / scale, h.getMaterial(), normal, r);
     }
-    return false;
+    return hit;
 }
 
 #endif // !_TRANSFORM_H_

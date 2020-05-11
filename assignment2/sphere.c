@@ -7,60 +7,30 @@ Sphere::Sphere(Vec3f &point, float &r, Material *&m)
     material = m;
 }
 
-Sphere::~Sphere()
-{
-}
-
 bool Sphere::intersect(const Ray &r, Hit &h, float tmin)
 {
+    Vec3f origin = r.getOrigin() - center;
     Vec3f dir = r.getDirection();
-    Vec3f c2c = center - r.getOrigin();
-
-    float tp = c2c.Dot3(dir);
-    float d2 = c2c.Dot3(c2c) - tp * tp;
-    if(d2 > radius * radius || tp <= 0)
-    {
-        return false;
+    float a = dir.Length()*dir.Length(), b = dir.Dot3(origin) * 2, c = origin.Dot3(origin) - radius * radius;
+    float d = b * b - 4 * a*c;
+    float t = 0;
+    if (d < 0) return false;
+    if (d == 0) {
+        t = -b / (2 * a);
     }
-    
-    float t = sqrt(radius * radius - d2);
-
-    if(radius == 1 && center.z() == 15)
-    {
-            std::cout 
-        << c2c.Dot3(c2c) << "  " 
-        << r.getDirection() << "  "
-        << tp << "  " 
-        << d2 << "  " 
-        << t << std::endl;
-
+    else {
+        d = sqrt(d);
+        t = (-b - d) / (2 * a);
+        if (t < tmin) t = (-b + d) / (2 * a);
     }
-
-    if(tp > t)
-    {
-        if(tp - t >= tmin)
-        {
-            // std::cout << std::endl;
-            if(tp - t < h.getT())
-            {
-                Vec3f normal = r.pointAtParameter(tp - t) - center;
-                normal.Normalize();
-                h.set(tp - t, material, normal, r);
-            }
+    if (t > tmin) {
+        if (h.getT() > t) {
+            Vec3f hit_point = r.pointAtParameter(t);
+            Vec3f normal = hit_point - center;
+            normal.Normalize();
+            h.set(t, material, normal, r);
             return true;
         }
-    }else
-    {
-        if(tp + t >= tmin)
-        {
-            if(tp + t < h.getT())
-            {
-                Vec3f normal = center - r.pointAtParameter(tp + t);
-                normal.Normalize();
-                h.set(tp + t, material, normal, r);
-            }
-            return true;
-        }        
     }
     return false;
 }
