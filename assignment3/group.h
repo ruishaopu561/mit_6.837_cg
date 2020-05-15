@@ -10,6 +10,7 @@ public:
     ~Group();
     virtual bool intersect(const Ray &r, Hit &h, float tmin);
     void addObject(int index, Object3D *obj);
+    virtual void paint(void);
 private:
     Object3D **objects;
     int size;

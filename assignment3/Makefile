@@ -8,6 +8,7 @@ SRCS 	 	= main.c \
 		  matrix.c \
 		  image.c \
 		  scene_parser.c \
+		  group.c \
 		  sphere.c \
 		  triangle.c \
 		  plane.c \

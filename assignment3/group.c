@@ -32,3 +32,11 @@ void Group::addObject(int index, Object3D *obj)
 {
     objects[index] = obj;
 }
+
+void Group::paint(void)
+{
+    for(int i=0; i<size; i++) {
+        Object3D *object = objects[i];
+        object->paint();
+    }
+}
