@@ -28,12 +28,13 @@ void diffuse_shader(const SceneParser *sp, const Hit& hit, Vec3f& color) {
 	auto ambient = sp->getAmbientLight();
 	Vec3f res = ambient * (hit.getMaterial()->getDiffuseColor());
 	for (int i = 0; i < sp->getNumLights(); i++) {
-		auto light = sp->getLight(i);
+		Light* light = sp->getLight(i);
 		Vec3f light_dir, light_col;
 		float light_distance;
 		light->getIllumination(hit.getIntersectionPoint(), light_dir, light_col, light_distance);
 		float power = light_dir.Dot3(hit.getNormal());
 		if (power < 0) power = 0;
+		
 		res += power * light_col*hit.getMaterial()->getDiffuseColor();
 	}
 	color = res;
@@ -106,8 +107,6 @@ void render()
 			bool hited = g->intersect(r, h, cam->getTMin());
 			if (hited) {
 				Vec3f hit_normal = h.getNormal();
-				bool back = hit_normal.Dot3(r.getDirection()) > 0;
-				if (back) hit_normal.Negate();
 				h.set(h.getT(), h.getMaterial(), hit_normal, r);
 				Vec3f pixel_color;
 				if (color_img) {

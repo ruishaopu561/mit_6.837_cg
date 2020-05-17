@@ -28,7 +28,9 @@ Vec3f PhongMaterial::Shade(const Ray &ray, const Hit &hit,
 
     Vec3f::Cross3(specular, lightColor, specularColor);
     specular *= dot;
-    return specular;
+    
+    return specular + getDiffuseColor();
+
 }
 
 void PhongMaterial::glSetMaterial(void) const {
