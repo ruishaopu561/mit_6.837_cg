@@ -14,7 +14,6 @@ SRCS 	 	= main.c \
 		  plane.c \
 	 	  transform.c \
 		  material.c \
-		  raytracer.c \
 		  light.c \
 		  camera.c \
 		  glCanvas.c
@@ -27,7 +26,7 @@ LIBS            = -lm -lGL -lGLU -lglut -L/usr/X11R6/lib -lXmu -lXi \
 		  -Xlinker -rpath -Xlinker /mit/mesa_v501/lib/ -L/mit/mesa_v501/lib/
 INCLUDE 	= -I/mit/mesa_v501/Mesa-5.0.1/include/
 CC		= g++
-EXE	  	= raytracer
+EXE	  	= main
 OBJS =  $(SRCS:.c=.o)
 
 # ===============================================================
