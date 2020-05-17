@@ -14,6 +14,9 @@ public:
 private:
     Vec3f center;
     float radius;
+    Vec3f pt2localxyz(float phi, float theta);
+	Vec3f pt2xyz(float phi, float theta);
+	Vec3f pt2Normal(float phi, float theta);
 };
 
 #endif // !_SPHERE_H_

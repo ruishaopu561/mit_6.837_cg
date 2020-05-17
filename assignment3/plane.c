@@ -28,19 +28,25 @@ void Plane::paint(void)
     float big = 10000;
 
     Vec3f v(1, 0 ,0), b1, b2;
-    if(normal == v)
+    if(normal.Dot3(v) == 1)
     {
         v = Vec3f(0, 1, 0);
     }
 
     Vec3f::Cross3(b1, v, normal);
     Vec3f::Cross3(b2, normal, b1);
+    b1.Normalize();
+    b2.Normalize();
+
+    Vec3f center = distance * normal;
+    
+    Vec3f p1 = center - big * b1, p2 = center - big * b2, p3 = center + big * b1, p4 = center + big * b2;
 
     glBegin(GL_QUADS);
         glNormal3f(normal.x(), normal.y(), normal.z());
-        glVertex3f(big * -b1.x(), big * -b1.y(), big * -b1.z());
-        glVertex3f(big * -b2.x(), big * -b2.y(), big * -b2.z());
-        glVertex3f(big * b1.x(), big * b1.y(), big * b1.z());
-        glVertex3f(big * b2.x(), big * b2.y(), big * b2.z());
+        glVertex3f(p1.x(), p1.y(), p1.z());
+        glVertex3f(p2.x(), p2.y(), p2.z());
+        glVertex3f(p3.x(), p3.y(), p3.z());
+        glVertex3f(p4.x(), p4.y(), p4.z());
     glEnd();
 }
