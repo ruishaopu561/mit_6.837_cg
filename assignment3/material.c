@@ -13,24 +13,35 @@ Vec3f PhongMaterial::getSpecularColor() const {
 Vec3f PhongMaterial::Shade(const Ray &ray, const Hit &hit, 
     const Vec3f &dirToLight, const Vec3f &lightColor) const
 {
-    Vec3f specular(0,0,0);
+  Vec3f specular = specularColor;
+  Vec3f diffuse = getDiffuseColor();
 
-    // Vec3f dir = ray.getDirection();
-    // int dot = dir.Dot3(hit.getNormal());
+  Vec3f N = hit.getNormal();
+  Vec3f V = ray.getDirection();
+  Vec3f D = dirToLight;
+  N.Normalize();
+  V.Normalize();
+  D.Normalize();
+  Vec3f H = dirToLight - V;
+  H.Normalize();
 
-    int dot = dirToLight.Dot3(hit.getNormal());
-    if(dot <= 0)
-    {
-        return specular;
-    }
+  float t = D.Dot3(N);
+  if(t <= 0) {
+    return Vec3f(0,0,0);
+  }
+  diffuse *= t;
 
-    dot = pow(dot, exponent);
+  float dot = N.Dot3(H);
+  dot = dot < 0 ? 0: dot;
+  dot = pow(dot, exponent);
 
-    Vec3f::Cross3(specular, lightColor, specularColor);
-    specular *= dot;
-    
-    return specular + getDiffuseColor();
+  specular *= dot;
 
+  if(t <= 0){
+    cout << (specular + diffuse)* lightColor << endl;
+  }
+
+  return (specular + diffuse)* lightColor;
 }
 
 void PhongMaterial::glSetMaterial(void) const {
