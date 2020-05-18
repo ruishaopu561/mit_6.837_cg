@@ -22,26 +22,20 @@ Vec3f PhongMaterial::Shade(const Ray &ray, const Hit &hit,
   N.Normalize();
   V.Normalize();
   D.Normalize();
-  Vec3f H = dirToLight - V;
+  Vec3f H = D - V;
   H.Normalize();
 
   float t = D.Dot3(N);
-  if(t <= 0) {
+  if(t < 0) {
     return Vec3f(0,0,0);
   }
   diffuse *= t;
 
-  float dot = N.Dot3(H);
-  dot = dot < 0 ? 0: dot;
-  dot = pow(dot, exponent);
+  float dot = pow(max(N.Dot3(H), (float)0), exponent);
 
   specular *= dot;
 
-  if(t <= 0){
-    cout << (specular + diffuse)* lightColor << endl;
-  }
-
-  return (specular + diffuse)* lightColor;
+  return (specular + diffuse) * lightColor;
 }
 
 void PhongMaterial::glSetMaterial(void) const {
