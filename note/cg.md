@@ -198,6 +198,22 @@ $ => M_{persp->ortho}*M_{persp} = M_{ortho}$
 + 可能不只是对每个像素操作，而是对每个采样点操作，比如超采样
 + 处理不了透明物体，因为有$\alpha$
 
+#### Shadow Mapping
+单独的光栅化不考虑物体间的相互遮挡，然而这与实际不符，于是引入Shadow Mapping。但它还是存在走样现象的。
+
+重要现象：阴影中的点只有视点能看到，但是光源看不到
+
+过程：
++ 从光源（必须是点光源）看向场景，根据z-buffer的方式记录各点的深度值（以像素为单位，总体上也就是一次光栅化）
++ 从摄像机/眼睛看向场景，对看到的每个点，查看光源记录的深度。如果记录的深度与点的深度一致，则该点在阴影外；否则，在阴影内。
+
+问题：
++ 只能做硬阴影（point light only），边缘非常锐利
++ 数值精度导致深度对比判断有问题
++ 光源的分辨率与视点的分辨率不同，又会导致计算的时候会出问题，比如光源分辨率太小就会使得一个像素记录太多信息，即出现了走样。
+
+软阴影的存在就是因为光源存在大小，而每个顶点并不是都能看到所有光源，因此存在本影与半影的区别，也正是因此才有了软阴影。
+
 ### Lecture7/8/9. Shading
 #### Illumination & Shading
 ##### Blinn-Phong着色模型：ambient(环境光) + diffuse(漫反射) + specular(高光)
@@ -279,10 +295,158 @@ $ => M_{persp->ortho}*M_{persp} = M_{ortho}$
 + 三维空间中需要先计算插值再投影
 + 投影之后没有不变性，这是缺点
 
+#### 纹理应用
++ Environment Map(环境映射): 记录环境中各种光照信息
+    + sphere map
+    + cube map：将sphere map的内容映射到cube上
++ 凹凸映射(Bump mapping)
+    + 并没有改变任何实际的几何信息，而是通过增加高度来计算新的法线向量，从而改变最终的着色。即：height->normal->shading
+    + 纹理图中对u求导得：$dp/du = (\Delta u, 0, h(u+1)-h(u))$
+    + 纹理图中对v求导得：$dp/dv = (\Delta v, 0, h(v+1)-h(v))$
+    + 最终法线是两者叉积得到的结果，当然得注意方向：$normal = dp/du \cdot dp/dv = (-dp/du, -dp/dv, 1)$
++ 位移贴图(Displacment Mapping)
+    + 也是存了高度，但是真的改了顶点位置
+    + 模型更细致更好，能更好的表现贴图结果
+
 ### Lecture10/11/12. Geometry
++ 分类：隐式几何，显式几何
+    + 结合需要进行选择
++ 隐式几何：
+    + 不给实际的点，用隐函数表示点坐标的关系，比如$x^2+y^2+z^2=1$
+    + 具体解释该几何体是什么很复杂，但是判断单个点的内外位置很容易
++ 显式几何：
+    + 直接给出所有点坐标，或者用参数映射
+        + 参数映射：
+            + 遍历(u, v)就能得到所有点的集合
+            + 例：$f(u, v) = ((2+cosu)cosv, (2+cosu)sinv, sinu)$
+    + 判断内外位置很复杂，判断形状比较简单
+
+#### 隐式表现方法
++ CSG
+    + Constructive Solid Geometry: 将简单的基本几何组合起来得到复杂的几何
++ Signed Distance Function(符号距离函数)
++ Level Set(水平集)
++ Fractal(分形)
+
+#### 显式表现方法
++ 点云
++ 多边形网格
++ 贝塞尔曲线(通过参数t定义)
+#### 贝塞尔曲线
+用一系列的控制点$p_0...p_n$去定义某个曲线。
+
+曲线一定经过$p_0$和$p_n$，且在$p_0$和$p_n$的切线与$p_0$,$p_1$和$p_{n-1}$，$p_n$的切线相同
+
++ 画线的算法：
+    + 假设$p_0$是时间0的点，$p_n$是时间1的点，需要找出时间t(t<1)的点在哪。遍历就能画出曲线上的所有点
+    + 推导过程见下图，就是一个递归求t的过程 ![bezier t](./beziert.png)
+    + 总结公式：(n+1)个控制点$p_0...p_n$，公式就是$b^n(t)=b_0^n(t) = \sum_{j=0}^nb_jB_j^n(t)$，$B_j^n(t)$就是多项展开式的值
+        + $B_i^n(t) = \left( \begin{matrix} n \\  i \end{matrix} \right) t^i (1-t)^{n-i}$
+
++ 仿射变换下贝塞尔曲线是一致的。先变换后画线/先画线后变换是一样的，因此可以只存控制点，做变换之后再画出来，不用记录所有点。
++ 投影变换下不适用。
++ 凸包性质：不会超过给定控制点形成的凸包范围
+
+##### 逐段贝塞尔曲线
+复杂曲线由多段简单贝赛尔曲线组成，一般这些简单贝赛尔曲线都是用4个控制点。
++ 连续性：
+    + c0连续：曲线A的终点就是曲线B的起点
+    + c1连续：c0连续，且该重合点切线相同
+
+##### B-splines(B样条曲线)
+比贝塞尔曲线更好，修改的时候只有局部会发生改变
+
+##### 贝塞尔曲面
+简单来说就是现在u方向上的时间t1上得到n条贝塞尔曲线，然后再对v方向上的时间t2的n个点再求一次贝塞尔曲线的点。
+
+因此这里需要两个参数$t_1$，$t_2$
+
+#### Mesh Operations(网格操作)
+
+#### Mesh Subvision(网格细分)(UpSampling)
++ Loop细分
+    + 将一个三角形分成4个（各边中点相连）
+    + 对各新旧顶点进行不同的顶点位置更新
+        + 对新顶点的更新方式：（白点） ![new vertex](./new_vertex.png)
+        + 对旧顶点的更新方式：（白点） 
+            + n: 该顶点的度
+            + u: 考虑周围顶点的值
+            + ![old vertex](./old_vertex.png)
+    + 只能用三角形面
++ Catmull-Clark细分
+    + 基础定义：
+        + quad face: 四边形的面，non-quad face: 非四边形的面
+        + Extraordinary vertex: 奇异点，度不为4的点
+    + 取各边和各面的中点，并且面中点与边中点连接
+    + 一次细分之后，non-quad面都变成了quad面，代价是多了一个奇异点。因此之后无论再做几次，奇异点都不会再增加，因为non-quad面在第一次就没了。
+    + 点的更新
+        + 面的中心点由四边顶点决定，边中点的规则和旧顶点的规则均如下：
+        + ![Catmull Clark](./catmull_clark.png)
+
+#### Mesh Simplification(网格简化)(DownSampling)
++ Collapse Edge：一条边坍缩成一个点
+    + Quadric Error Metrics(二次误差度量)：新的点到与原来的边有关的面的距离的平方和最小，就是该边最优的坍缩位置
+        + 问题：某边的坍缩会影响相邻边的二次误差度量值 => 用最小堆，取最小值，更新受影响的值，更新堆，再取最小值
+        + 这其实是贪心算法，没法全局取坍缩的边
+
+#### Mesh Regularization(网格正则化)(Same #Triangles)
+
 ### Lecture13/14/15/16. Ray Tracing
+光线追踪需要解决的问题：
++ 软阴影(Soft shadows)
++ Glossy reflection(类似铜镜这种有反射但是不是纯反射还有自身材质的东西)
++ 间接光照(Indirect illumination): 类似于环境光的真实模拟
+
+光线追踪类型：
++ Pinhole Ray Tracing
++ Recursive(Whitted-style) Ray Tracing
+    ![recurcive ray tracing](./recurcive_raytracing.png)
+
+#### 光线追踪的技术问题
++ 光线与物体表面的焦点
+    + 光线：$r(t) = oringin + t * direction, 0 \le t < \infty$
+    + 与隐式表面的相交计算，假设隐式函数为$f(p) = 0$，有$f(origin+t*direction) = 0$，需要的解是正数解 
+    + 与显式表面相交计算，
+        + 也就是与三角形求交点 <=> 光线与三角形所在平面求交 + 交点是否在三角形内。交点p，$(p-p') \cdot N = (origin + t * direction - p') \cdot N = 0 => t = \frac{p'\cdot N-origin}{direction \cdot N}$，检查：$0 \le t < \infty$
+        + Moller Trumbore算法：
+            + 光线上的点与三角形上的点相交有: $origin + t*direction = (1-b_1-b_2)p_0 + b_1p_1+b_2p_2$，最终结果如下：
+            $\left[ \begin{matrix} t \\ b_1 \\ b_2 \end{matrix} \right] = \frac{1}{S_1 \cdot E_1} \left[ \begin{matrix} S_2 \cdot E_2 \\ S_1 \cdot S \\ S_2 \cdot D  \end{matrix} \right]， \begin{matrix} E_1 = p_1 - p_0 \\  E_2 = p_2 - p_0 \\ S = O-p_0 \\ S_1=D \times E_2 \\ S_2=S \times E_1  \end{matrix}, 检查: \begin{matrix} 0 \le t < \infty \\ 0 \le b_1 \le 1 \\ 0 \le b_2 \le 1 \\  \end{matrix}$
+
++ 加速光线与表面求交的加速(显然不能与每个三角形都求一次)
+    + Bounding Volumn(包围盒): 用简单的三维物体包围复杂的三维物体，那么计算相交时就需要先和简单物体作相交判断，不相交则直接pass，节省了大量计算量。
+        + Axis-Aligned Bounding Box(AABB): 轴对齐包围盒，这个常用。与这个包围盒的相交判断算法十分简单，这里不做记录了。
+    + Uniform Spatial Partitions(Grids): 不适用于大规模的空白，如果空间中只有某一小块有物体，那格子会非常小，这样按步判断计算量反而很大
+    + 空间划分：
+        划分的停止条件，某块为空或者块内的物体数量足够少
+        + Oct Tree: 八叉树
+        + KD Tree: 与八叉树类似，但是递归切分时一次只切分为两块；为了切分均匀，轴向的切分需要有顺序，例：x->y->z->x->y->z...
+            + 并不是按物体划分，因此后续的物体判断比较复杂
+        + BSP Tree: 不是横平竖直，随着维度增加，切分计算越来越复杂，不如KD Tree.
+        ![spatial partition](./spatial_partition.png)
+    + Bounding Volume Hierachy(BVH): 以空间物体划分，生成类似KD Tree的树，空间上可能重叠，终止条件是盒子里物体足够少。
+        + 问题：空间上不是严格分开，因此如何划分以减少重叠空间就是值得研究的问题
+
+#### Basic radiometry(辐射度量学)
+物理上准确定义光线的方法。
+
+基础定义：
++ Radiant Energy: 电磁辐射的能量，以焦耳为单位$Q [J = Joule]$
++ Radiant flux: 单位时间的能量（功率），以瓦特为单位$\Phi = \frac{dQ}{dt}[W = Watt][lm=lumen]^*$
++ Radiant Intensity: 单位立体角辐射出去的能量，$I(w) = \frac{d\Phi}{dw}[\frac{W}{sr}][\frac{lm}{sr} = cd = candela]$
+    + 立体角=面积/半径的平方：$\Omega = \frac{A}{r^2}$
++ Irradiance
++ radiance
+
+学习新知识的方式：Why, What and How
+
+##### Radiant Energy and Flux(Power)
+
 ### Lecture17. Materials and Appearances
+
 ### Lecture18. Advanced Topics in Rendering
+
 ### Lecture19. Cameras, Lenses and Light Fields
+
 ### Lecture20. Color and Perception
+
 ### Lecture21/22. Animation
