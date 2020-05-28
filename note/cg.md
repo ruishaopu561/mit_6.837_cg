@@ -1,3 +1,6 @@
+## Computer Graphics
+学习新知识的方式：Why, What and How
+
 ### Lecture3. Transformation
 #### 2D变换
 + 缩放矩阵(Scale)
@@ -431,22 +434,210 @@ $ => M_{persp->ortho}*M_{persp} = M_{ortho}$
 
 基础定义：
 + Radiant Energy: 电磁辐射的能量，以焦耳为单位$Q [J = Joule]$
-+ Radiant flux: 单位时间的能量（功率），以瓦特为单位$\Phi = \frac{dQ}{dt}[W = Watt][lm=lumen]^*$
++ Radiant flux: 单位时间的能量（功率），以瓦特为单位$\Phi = \frac{dQ}{dt}[W = Watt][lm=lumen]^*$，图形学更多用的是功率
 + Radiant Intensity: 单位立体角辐射出去的能量，$I(w) = \frac{d\Phi}{dw}[\frac{W}{sr}][\frac{lm}{sr} = cd = candela]$
     + 立体角=面积/半径的平方：$\Omega = \frac{A}{r^2}$
-+ Irradiance
-+ radiance
++ Irradiance：
+    + 接受辐射，或者是光源往外辐射
+    + $E(x) = \frac{d(\Phi)}{dA}$
+    + 联系Lambert's Cosine Law，因为有这个定义，才有那个法则
+    + 也能解释季节变化，因为自转导致直射纬度在变
+    + <center>
+            <img style="border-radius: 0.3125em;
+            box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+            src="./irradiance_falloff.png">
+            <br>
+            <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+            display: inline-block;
+            color: #999;
+            padding: 2px;">
+                Irradiance衰减图示
+            </div>
+        </center>
++ radiance：
+    + 单位立体角、单位辐射面积上的功率
+    + $L(p, w) = \frac{d^2\Phi(p, w)}{d\omega dA cos\theta}$，$cos\theta$是irradiance的夹角
 
-学习新知识的方式：Why, What and How
+#### BRDF
+BRDF：Bidirectional Reflection Ditribution Function双向反射分布函数，描述一束入射光的反射光的分布
 
-##### Radiant Energy and Flux(Power)
++ BRDF：某个入射方向的出射方向的贡献分布计算式
+    <center>
+        <img style="border-radius: 0.3125em;
+        box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+        src="./rushe_fanshe.png">
+        <br>
+        <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+        display: inline-block;
+        color: #999;
+        padding: 2px;">
+            BRDF: 入射光与反射光
+        </div>
+    </center>
++ 反射方程(光线计算)：某个出射方向的光线计算式（即各个反射量的求和/积分）
+    + $L_r(p, \omega_r) = \int_{H^2}f_r(p, \omega_i \rightarrow \omega_r)L_i(p, \omega_i)cos\theta_i d{\omega}_i$
++ 渲染方程：
+    + 反射光 = 自己发光+反射别人的光
+    + $L_o(p,\omega_o) = L_e(p, \omega_o) + \int_{\Omega^+}L_i(p,\omega_i)f_r(p, \omega_i, \omega_o) (n \cdot \omega_i) d{\omega}_i$，其中$n \cdot\omega_i = cos\theta_i$
+    + 方程简化
+        + 最终算式：$L = E + KE+K^2E+ K^3E+...$
+        ![original](./brdf1.png) ![./simmplify](./brdf2.png)
+    + 光栅化只能做到$E$和$E+KE$
 
-### Lecture17. Materials and Appearances
+#### Monte Carlo Intergration(蒙特卡洛积分)
+求解难以计算解析解的函数的定积分：$\int_a^b f(x)dx$
+
++ 常规算式：$\int f(x)dx = \frac{1}{N} \sum_{i=1}^{N} \frac{f(X_i)}{p(X_i)}$，$X_i$ ~ $p(x)$，$N$越大越准确
+
+#### 解渲染方程
++ Simple蒙特卡洛解法(不考虑自光源)
+    + 直接光照下
+        $L_o(a,\omega_o) 
+        =\int_{\Omega^+}L_i(a,\omega_i)f_r(a, \omega_i, \omega_o) (n \cdot \omega_i) d{\omega}_i
+        =\frac{1}{N} \sum_{i=1}^{N} \frac{L_i(a,\omega_i)f_r(a, \omega_i, \omega_o) (n \cdot \omega_i)}{p(\omega_i)}$
++ 考虑物体发光，也就是考虑间接反射。
+    + 只要假设某点也会从其他点接受光线，那么它本身就像是摄像机，于是就形成了递归，递归伪代码如下：
+        <center>
+            <img style="border-radius: 0.3125em;
+            box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+            src="./motekarluo_n.png">
+            <br>
+            <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+            display: inline-block;
+            color: #999;
+            padding: 2px;">
+                蒙特卡洛方法——N
+            </div>
+        </center>
++ 每条入射光产生N条出射光的结果会导致光线数量爆炸。因此上述伪代码无法实现。解决办法也很简单，每次只产生一条，然后在该点随机N次，取N次结果的平均以得到噪声较小的结果。代码如下：
+    <center>
+        <img style="border-radius: 0.3125em;
+        box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+        src="./motekarluo_1.png">
+        <br>
+        <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+        display: inline-block;
+        color: #999;
+        padding: 2px;">
+            蒙特卡洛方法——1
+        </div>
+    </center>
+    <center>
+        <img style="border-radius: 0.3125em;
+        box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+        src="./ray_generation.png">
+        <br>
+        <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+        display: inline-block;
+        color: #999;
+        padding: 2px;">
+            Ray Generation
+        </div>
+    </center>
++ 解决无限递归：采用概率p决定是否往下递归。伪代码如下：
+    <center>
+        <img style="border-radius: 0.3125em;
+        box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+        src="./recursion_solution.png">
+        <br>
+        <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+        display: inline-block;
+        color: #999;
+        padding: 2px;">
+            解决无限递归
+        </div>
+    </center>
+
++ 在着色点上采样，光的传播结果大部分都是一种浪费。因此我们将对着色点采样改为对光源采样，这样可以节省大量无用的计算量
+    + 首先是立体角到光源面积的积分转换，关系：$d\omega_i = \frac{cos\theta'}{||x'-p||^2} dA$，$\theta'$是光源面的法线向量与入射光线的夹角，$||x'-p||^2$光源点到入射点的距离的平方(这个不难理解)
+    + 得到新的渲染方程：$L_o(a,\omega_o) 
+        =\int_{\Omega^+}L_i(a,\omega_i)f_r(a, \omega_i, \omega_o) (n \cdot \omega_i) \frac{cos\theta'}{||x'-p||^2} dA$
+    + 因此，可以对光源进行简单的均匀采样(即概率为常数)，然后计算贡献度和，取平均。
+    + 注意，有物体遮挡的时候也要考虑进去，这是直接光照和间接光照（其实也就是变相的直接光照）都要考虑的。
+    + 伪代码如下：
+        <center>
+            <img style="border-radius: 0.3125em;
+            box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+            src="./lightsource.png">
+            <br>
+            <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+            display: inline-block;
+            color: #999;
+            padding: 2px;">
+                光源采样
+            </div>
+        </center>
+
+### Lecture17. Materials and Appearances(材质外观)
++ Diffuse / Lambertian Material
+    + BRDF $f_r = \frac{\rho}{\pi}$，其中$\rho$是albedo，既可以是材质的颜色，也可以是纹理，参照unity里的设置
++ Glossy Material(抛光金属)
++ Ideal reflective / refractive material (BSDF*)
+    + 水、玻璃等既可反射也可折射的材质(也有部分吸收)
+    + 折射定律：Snell's Law 
+        + $\eta_i sin\theta_i = \eta_t sin\theta_t$
++ Specular 
++ Fresnel Term(菲涅尔项，$\eta = 1.5$)
+    + 视线方向与法线方向越接近平行，折射就越是严重；反之，反射就越严重。
+    + Schlick's近似算法：$R(\theta) = R_0 + (1-R_0)(1-cos\theta)^5$，其中$R_0 = (\frac{n_1 - n_2}{n_1 + n_2})^2$，$n_1,n_2$就是两种介质的折射率。
++ Microfacet Material(微表面材料，非常重要！！！)
+    + 从近处看能看到微表面的细节，能看到凹凸不平的、但是能出现镜面反射的；从远处看能看到平坦粗糙的外观。
+    + 近处是几何，远处的材质
+    + 因此，微表面上法线方向不同但大体相同也就是Glossy的材质
+    + $f(i,o) = \frac{F(i, h) G(i,o,h) D(h) }{4(n,i)(n,o)}$
+        + F(i, h)：$F_{Schlick} = C_{spec} + (1-C_{spec})(1-l \cdot h)^5$(考虑了高光颜色$C_{spec}$)，菲涅尔项，描述光的反射与折射量
+        + G(i,o,h)：$G_{Cook-Torrance} = min(1, \frac{2(n \cdot h)(n \cdot v)}{v \cdot h}, \frac{2(n \cdot h)(n \cdot l)}{v \cdot h})$ shadow-masking项，可以处理边界处太亮的情况
+        + D(h)：$D_{GGX} = \frac{\alpha^2}{\pi ((n \cdot h)^2(\alpha^2-1)+1)^2}$，法线分布
+            <center>
+                <img style="border-radius: 0.3125em;
+                box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
+                src="./microfacet.png">
+                <br>
+                <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+                display: inline-block;
+                color: #999;
+                padding: 2px;">
+                    微表面模型
+                </div>
+            </center>
++ Isotropic / Anisotropic Materials(各向同性/各向异性材料)
+    + 与绝对方位角有关
 
 ### Lecture18. Advanced Topics in Rendering
++ 无偏：unbiased，利用蒙特卡洛方法计算的估计的期望和实际的相等的。(也就是概率上的无偏性)
++ 有偏：biased，与unbiased相反。
+    + 一致：consistent，原本有偏，收敛之后是无偏的。
+
+#### 无偏光线传播算法
++ BDPT: Bidrectional Path Tracing
+    + 从光源和视点同时采样得到半路径，然后连接两个顶点得到整个路径。
+    + 很难实现，速度也很慢，对某些情况的效果很好。
++ MLT: Metropolis Light Transport
+    + 马尔科夫链的应用：蒙特卡洛积分法中，当采样分布与原函数基本一致的时候得到的误差是最小的。而马尔科夫链就可以生成这种与原函数基本一致的pdf。它可以生成与给定路径相似的路径
+    + 复杂光路上效果很好。但是很难判断是否收敛
+
+#### 有偏光线传播算法
++ Photon Mapping
+    + 能很好的处理Specular-Diffuse-Specular(SDS)和产生caustics
+        + caustics: 由于光线聚焦产生的非常强烈的图案
+    + 实现过程
+        + stage 1: 从光源发散出photons，不断反射、折射它们，直到达到diffuse的表面。
+        + stage 2: 从照相机发散出photons，不断反射、折射它们，直到达到diffuse的表面。
+        + 计算：local density estimation
+            + 对每个着色点，取其周围的N个photon，求出它们所占的面积，就能求出密度。密度越大的就应该越亮。
+            + N越小的时候，noise就会比较大
++ Vertex Connection and Merging
+    + BDPT和Photon Mapping的组合
++ Instant Radiosity(IR)实时辐射度
+    + 不能处理Glossy的物体
 
 ### Lecture19. Cameras, Lenses and Light Fields
-
 ### Lecture20. Color and Perception
+上述两讲内容与基本图形学关系不大，具体可以去看视频内容，这里不做记录。
 
 ### Lecture21/22. Animation
++ 关键帧动画
++ 质点弹簧系统
++ 粒子系统
++ Forward Kinematics
++ Rigging(绑定)
