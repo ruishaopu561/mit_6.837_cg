@@ -1,4 +1,6 @@
 ## Computer Graphics
+[课程视频](https://www.bilibili.com/video/BV1X7411F744)
+
 学习新知识的方式：Why, What and How
 
 ### Lecture3. Transformation
