@@ -641,3 +641,29 @@ BRDF：Bidirectional Reflection Ditribution Function双向反射分布函数，�
 + 粒子系统
 + Forward Kinematics
 + Rigging(绑定)
+
+#### Euler方法
++ 一阶(前向)欧拉方法
+    + $x^{t+ \Delta t} = x^t + \Delta t x'^t, x'^{t+ \Delta t} = x'^t + \Delta t x''^t$
+    + 受步长$\Delta t$的影响误差可能很大，当然减小$\Delta t$可以减小误差
+    + 非常不稳定，可能会出现不符合实际规律得到结果
++ 中点法（Midpoint method）
+    + $x_{mid} = x^t + \Delta t /2 \cdot x'^t \rightarrow x^{t+\Delta t} = x^t + \Delta t \cdot x'_{mid}$
+    + 上式化简得$x^{t+ \Delta t} = x^t + \Delta t x'^t + \frac{(\Delta t)^2}{2} x''^t$
++ Implicit Euler Method
+    + 与显式欧拉方法不同，隐式欧拉方法是用下一时刻的速度和加速度等量
+    + $x^{t+ \Delta t} = x^t + \Delta t x'^{t+ \Delta t}, x'^{t+ \Delta t} = x'^t + \Delta t x''^{t+ \Delta t}$
++ Runge Kutta Method
+    + RK4,4阶，最常用
+    + 假设初始条件$\frac{dy}{dt} = f(x, y), y(t_0) = y_0$
+    + 有$y_{n+1} = y_n + \frac{1}{6}h(k_1+2k_2+2k_3+k_4), t_{n+1} = t_n + h$
+    + 上式中$k_{1-4}$的值如下：$\left[ \begin{matrix} k_1 \\ k_2 \\ k_3 \\ k_4 \end{matrix} \right] = \left[ \begin{matrix} f(t_n, y_n) \\ f(t_n+\frac{h}{2}, y_n+h \frac{k_1}{2}) \\ f(t_n+\frac{h}{2}, y_n+h \frac{k_2}{2}) \\ f(t_n+h, y_n+hk_3) \end{matrix} \right]$
++ Position Based / Verlet Integration
+
+#### 大规模粒子的模拟方法
++ 拉格朗日法（质点法）
+    + 对每个单独的粒子计算其运动变化规律
++ 欧拉法（网格法）
+    + 划分空间，以空间为单位考虑
++ Material Point Method(MPM)
+    + 现在非常热门的方法，也是拉格朗日法和的结合
