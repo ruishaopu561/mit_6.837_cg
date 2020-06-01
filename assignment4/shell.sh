@@ -19,13 +19,22 @@ mkdir result
 
 ./main -input ./scene/scene4_05_transparent_bar.txt -size 200 200 -output ./result/output4_05.tga -shadows -bounces 10 -weight 0.01 -shade_back -gui
 
+./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06a.tga -shadows -bounces 0 -weight 0.01 -shade_back
+./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06b.tga -shadows -bounces 1 -weight 0.01 -shade_back
+./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06c.tga -shadows -bounces 2 -weight 0.01 -shade_back
+./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06d.tga -shadows -bounces 3 -weight 0.01 -shade_back
+./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06e.tga -shadows -bounces 4 -weight 0.01 -shade_back
+./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06f.tga -shadows -bounces 5 -weight 0.01 -shade_back
 ./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06a.tga -shadows -bounces 0 -weight 0.01 -shade_back -gui
 ./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06b.tga -shadows -bounces 1 -weight 0.01 -shade_back -gui
 ./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06c.tga -shadows -bounces 2 -weight 0.01 -shade_back -gui
 ./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06d.tga -shadows -bounces 3 -weight 0.01 -shade_back -gui
 ./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06e.tga -shadows -bounces 4 -weight 0.01 -shade_back -gui
 ./main -input ./scene/scene4_06_transparent_bars.txt -size 200 200 -output ./result/output4_06f.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui
-  
+
+./main -input ./scene/scene4_07_transparent_sphere_1.0.txt -size 200 200 -output ./result/output4_07.tga -shadows -bounces 5 -weight 0.01 -shade_back -tessellation 30 15
+./main -input ./scene/scene4_08_transparent_sphere_1.1.txt -size 200 200 -output ./result/output4_08.tga -shadows -bounces 5 -weight 0.01 -shade_back -tessellation 30 15
+./main -input ./scene/scene4_09_transparent_sphere_2.0.txt -size 200 200 -output ./result/output4_09.tga -shadows -bounces 5 -weight 0.01 -shade_back -tessellation 30 15
 ./main -input ./scene/scene4_07_transparent_sphere_1.0.txt -size 200 200 -output ./result/output4_07.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui -tessellation 30 15
 ./main -input ./scene/scene4_08_transparent_sphere_1.1.txt -size 200 200 -output ./result/output4_08.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui -tessellation 30 15
 ./main -input ./scene/scene4_09_transparent_sphere_2.0.txt -size 200 200 -output ./result/output4_09.tga -shadows -bounces 5 -weight 0.01 -shade_back -gui -tessellation 30 15

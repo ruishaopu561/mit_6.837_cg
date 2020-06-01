@@ -27,9 +27,10 @@ bool weight = false;
 bool shade_back = false;
 int max_bounces = 0;
 float weights = float(0);
-float epsilon = 0.1;
+const float epsilon = 0.1;
 
 SceneParser *sp = NULL;
+RayTracer *rt = NULL;
 
 void render();
 void traceRay(float i, float j);
@@ -91,7 +92,7 @@ int main(int argc, char* argv[]) {
 	cout << "parse ok!" << endl;
 
 	sp = new SceneParser(input_file);
-	RayTracer *rt = new RayTracer(sp, max_bounces, weights, shadows);
+	rt = new RayTracer(sp, max_bounces, weights, shadows);
 
 	if(gui)
 	{
@@ -101,7 +102,6 @@ int main(int argc, char* argv[]) {
 	}
 	else{
 		render();
-		// traceRay();
 	}
     return 0;
 }
@@ -120,29 +120,8 @@ void render()
 		for (int j = 0; j < height; j++) {
 			Hit h(INFINITY, NULL, {0, 0, 1});
 			Ray r = camera->generateRay({i * 1.0f / width, j * 1.0f / width});
-			bool hited = group->intersect(r, h, camera->getTMin());
-			if (hited) {
-				Vec3f hit_normal = h.getNormal();
-				h.set(h.getT(), h.getMaterial(), hit_normal, r);
-
-				color = sp->getAmbientLight() * (h.getMaterial()->getDiffuseColor());
-				for (int i = 0; i < sp->getNumLights(); i++) {
-					Light* light = sp->getLight(i);
-					Vec3f light_dir, light_col;
-					float light_distance;
-					light->getIllumination(h.getIntersectionPoint(), light_dir, light_col, light_distance);
-
-					Ray ray2(r.getOrigin() + r.getDirection() * h.getT(), light_dir);
-					Hit hit2(light_distance, NULL, {0,0,0});
-					group->intersect(ray2, hit2, epsilon);
-					if(hit2.getT() == light_distance)
-					{
-						color += h.getMaterial()->Shade(r, h, light_dir, light_col);
-					}
-				}
-
-				color_img->SetPixel(i, j, color);
-			}
+			color = rt->traceRay(r, camera->getTMin(), 0, 1, 0, h);
+			color_img->SetPixel(i, j, color);
 		}
 	}
 	if (color_img)
@@ -155,5 +134,10 @@ void render()
 
 void traceRay(float i, float j)
 {
+	Camera *camera = sp->getCamera();
 
+	Vec2f point(j, 1 - i);
+	Ray ray = camera->generateRay(point);
+	Hit hit;
+	Vec3f Color = rt->traceRay(ray, camera->getTMin(), 0, weights, 0, hit);
 }

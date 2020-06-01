@@ -11,6 +11,7 @@ public:
     virtual bool intersect(const Ray &r, Hit &h, float tmin);
     void addObject(int index, Object3D *obj);
     virtual void paint(void);
+    int getSize();
 private:
     Object3D **objects;
     int size;

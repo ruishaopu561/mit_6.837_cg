@@ -40,3 +40,8 @@ void Group::paint(void)
         object->paint();
     }
 }
+
+int Group::getSize()
+{
+    return size;
+}
