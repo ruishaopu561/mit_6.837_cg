@@ -120,7 +120,7 @@ void render()
 		for (int j = 0; j < height; j++) {
 			Hit h(INFINITY, NULL, {0, 0, 1});
 			Ray r = camera->generateRay({i * 1.0f / width, j * 1.0f / width});
-			color = rt->traceRay(r, camera->getTMin(), 0, 1, 0, h);
+			color = rt->traceRay(r, camera->getTMin(), 0, 1, 1, h);
 			color_img->SetPixel(i, j, color);
 		}
 	}

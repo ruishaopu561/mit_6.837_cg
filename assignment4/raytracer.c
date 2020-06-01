@@ -50,7 +50,7 @@ RayTracer::RayTracer(SceneParser *s, int max_bounces, float cutoff_weight, bool 
 Vec3f RayTracer::traceRay(Ray &ray, float tmin, int bounces, 
         float weight, float indexOfRefraction, Hit &hit) const
 {
-    if(bounces > maxBounces)
+    if(bounces > maxBounces || weight <= cutoffWeight)
     {
         return Vec3f(0, 0, 0);
     }
@@ -59,16 +59,14 @@ Vec3f RayTracer::traceRay(Ray &ray, float tmin, int bounces,
 	Group* group = sp->getGroup();
     bool hited = group->intersect(ray, hit, tmin);
     if (hited) {
-		if (bounces == 0)
-			RayTree::SetMainSegment(ray, 0, hit.getT());
+        // hit.set(hit.getT(), hit.getMaterial(), hit.getNormal(), ray);
 
-        hit.set(hit.getT(), hit.getMaterial(), hit.getNormal(), ray);
+        Vec3f light_dir, light_col;
+        float light_distance;
 
         color = sp->getAmbientLight() * (hit.getMaterial()->getDiffuseColor());
         for (int i = 0; i < sp->getNumLights(); i++) {
             Light* light = sp->getLight(i);
-            Vec3f light_dir, light_col;
-            float light_distance;
             light->getIllumination(hit.getIntersectionPoint(), light_dir, light_col, light_distance);
 
             if(shadow) {
@@ -80,7 +78,6 @@ Vec3f RayTracer::traceRay(Ray &ray, float tmin, int bounces,
                     color += hit.getMaterial()->Shade(ray, hit, light_dir, light_col);
                 }
             } else {
-                RayTree::AddShadowSegment(ray, 0, 20);
                 color += hit.getMaterial()->Shade(ray, hit, light_dir, light_col);
             }
         }
@@ -91,7 +88,6 @@ Vec3f RayTracer::traceRay(Ray &ray, float tmin, int bounces,
             Ray mirror_ray(hit.getIntersectionPoint(), mirrorDirection(hit.getNormal(), ray.getDirection()));
             Hit mirror_hit(INFINITY, NULL, {0, 0, 1});
     		color += reflective_color * traceRay(mirror_ray, epsilon, bounces+1, weight, indexOfRefraction, mirror_hit);
-	        RayTree::AddReflectedSegment(mirror_ray, 0, mirror_hit.getT());
         }
 
     	Vec3f transparent_color = hit.getMaterial()->getTransparentColor();
@@ -112,21 +108,17 @@ Vec3f RayTracer::traceRay(Ray &ray, float tmin, int bounces,
             if(check){
                 if(inside)
                 {
-                	color += transparent_color * traceRay(transparent_ray, epsilon, bounces+1, weight, 1.0, transparent_hit);
+                	transparent_color = transparent_color * traceRay(transparent_ray, epsilon, bounces+1, weight, 1.0, transparent_hit);
                 }else{
-            		color += transparent_color * traceRay(transparent_ray, epsilon, bounces+1, weight, hit.getMaterial()->getIndexOfRefraction(), transparent_hit);
-                }        
+            		transparent_color = transparent_color * traceRay(transparent_ray, epsilon, bounces+1, weight, hit.getMaterial()->getIndexOfRefraction(), transparent_hit);
+                }
+                color += transparent_color;
             }
 
-            RayTree::AddTransmittedSegment(transparent_ray, 0, transparent_hit.getT());
     	}
 
         return color;
     }
-	else if (bounces == 0)
-	{
-		RayTree::SetMainSegment(ray, 0, 10);
-	}
 
     return sp->getBackgroundColor();
 }
