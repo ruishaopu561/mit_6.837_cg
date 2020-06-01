@@ -8,6 +8,7 @@
 #include "camera.h"
 #include "group.h"
 #include "glCanvas.h"
+#include "raytracer.h"
 
 using namespace std;
 
@@ -26,21 +27,12 @@ bool weight = false;
 bool shade_back = false;
 int max_bounces = 0;
 float weights = float(0);
+float epsilon = 0.1;
 
 SceneParser *sp = NULL;
 
 void render();
-
-void diffuse_shader(const SceneParser *sp, Ray &ray, const Hit& hit, Vec3f& color) {
-	color = sp->getAmbientLight() * (hit.getMaterial()->getDiffuseColor());
-	for (int i = 0; i < sp->getNumLights(); i++) {
-		Light* light = sp->getLight(i);
-		Vec3f light_dir, light_col;
-		float light_distance;
-		light->getIllumination(hit.getIntersectionPoint(), light_dir, light_col, light_distance);
-		color += hit.getMaterial()->Shade(ray, hit, light_dir, light_col);
-	}
-}
+void traceRay(float i, float j);
 
 int main(int argc, char* argv[]) {
 	// sample command line:
@@ -98,23 +90,20 @@ int main(int argc, char* argv[]) {
     
 	cout << "parse ok!" << endl;
 
-	// sp = new SceneParser(input_file);
-	// if(gui)
-	// {
-	// 	glutInit(&argc, argv);
-	// 	GLCanvas gc;
-	// 	gc.initialize(sp, render, traceRay);
-	// }
-	// else{
-	// 	render();
-	// 	traceRay();
-	// }
+	sp = new SceneParser(input_file);
+	RayTracer *rt = new RayTracer(sp, max_bounces, weights, shadows);
+
+	if(gui)
+	{
+		glutInit(&argc, argv);
+		GLCanvas gc;
+		gc.initialize(sp, render, traceRay);
+	}
+	else{
+		render();
+		// traceRay();
+	}
     return 0;
-}
-
-void traceRay(float i, float j)
-{
-
 }
 
 void render()
@@ -124,21 +113,35 @@ void render()
 		color_img = new Image(width, height);
 		color_img->SetAllPixels(sp->getBackgroundColor());
 	}
-	Group* g = sp->getGroup();
-	Camera* cam = sp->getCamera();
-	for (int i = 0; i <width; i++) {
+	Group* group = sp->getGroup();
+	Camera* camera = sp->getCamera();
+	Vec3f color;
+	for (int i = 0; i < width; i++) {
 		for (int j = 0; j < height; j++) {
 			Hit h(INFINITY, NULL, {0, 0, 1});
-			Ray r = cam->generateRay({i * 1.0f / width, j * 1.0f / width});
-			bool hited = g->intersect(r, h, cam->getTMin());
+			Ray r = camera->generateRay({i * 1.0f / width, j * 1.0f / width});
+			bool hited = group->intersect(r, h, camera->getTMin());
 			if (hited) {
 				Vec3f hit_normal = h.getNormal();
 				h.set(h.getT(), h.getMaterial(), hit_normal, r);
-				Vec3f pixel_color;
-				if (color_img) {
-					diffuse_shader(sp, r, h, pixel_color);
-					color_img->SetPixel(i, j, pixel_color);
+
+				color = sp->getAmbientLight() * (h.getMaterial()->getDiffuseColor());
+				for (int i = 0; i < sp->getNumLights(); i++) {
+					Light* light = sp->getLight(i);
+					Vec3f light_dir, light_col;
+					float light_distance;
+					light->getIllumination(h.getIntersectionPoint(), light_dir, light_col, light_distance);
+
+					Ray ray2(r.getOrigin() + r.getDirection() * h.getT(), light_dir);
+					Hit hit2(light_distance, NULL, {0,0,0});
+					group->intersect(ray2, hit2, epsilon);
+					if(hit2.getT() == light_distance)
+					{
+						color += h.getMaterial()->Shade(r, h, light_dir, light_col);
+					}
 				}
+
+				color_img->SetPixel(i, j, color);
 			}
 		}
 	}
@@ -148,4 +151,9 @@ void render()
     }
 
 	delete color_img;
+}
+
+void traceRay(float i, float j)
+{
+
 }
